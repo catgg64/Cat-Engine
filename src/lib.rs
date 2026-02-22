@@ -49,7 +49,7 @@ impl Engine{
     pub fn update(&mut self) {
         self.running = self.input.update(&mut self.event_pump);
 
-        if self.running {
+        while self.running {
             self.canvas.present();
         };
     }
