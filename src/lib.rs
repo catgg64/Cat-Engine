@@ -30,7 +30,6 @@ impl CatEngine{
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new();
         let mut running: bool = true;
-        let scancode = sdl2::keyboard::Scancode
 
         Ok(Self {
             canvas,
