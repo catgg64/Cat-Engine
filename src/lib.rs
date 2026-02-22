@@ -1,4 +1,4 @@
-use sdl2::{libc::sleep, pixels::Color, *};
+use sdl2::{libc::sleep, pixels::Color, sys::True, *};
 use color::*;
 use input::*;
 pub mod color;
@@ -8,6 +8,7 @@ pub struct Engine {
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
     screen_rect: sdl2::rect::Rect,
+    input: input::Input,
 }
 
 impl Engine{
@@ -26,12 +27,14 @@ impl Engine{
             .map_err(|e| e.to_string())?;
 
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
-
+        let input: Input = input::Input::new();
+        let mut running: bool = true;
 
         Ok(Self {
             canvas,
             event_pump,
             screen_rect,
+            input,
         })
     }
     
@@ -42,7 +45,11 @@ impl Engine{
     }
 
     pub fn update(&mut self) {
-        self.canvas.present();
+        self.running = self.input.update(self.event_pump);
+
+        if self.running {
+            self.canvas.present();
+        };
     }
 
     
