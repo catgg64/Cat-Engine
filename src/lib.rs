@@ -9,7 +9,7 @@ pub struct CatEngine {
     event_pump: sdl2::EventPump,
     screen_rect: sdl2::rect::Rect,
     pub input: input::Input,
-    running: bool,
+    pub running: bool,
 }
 
 impl CatEngine{
