@@ -9,6 +9,7 @@ pub struct Engine {
     event_pump: sdl2::EventPump,
     screen_rect: sdl2::rect::Rect,
     input: input::Input,
+    running: bool,
 }
 
 impl Engine{
@@ -35,6 +36,7 @@ impl Engine{
             event_pump,
             screen_rect,
             input,
+            running
         })
     }
     
@@ -45,7 +47,7 @@ impl Engine{
     }
 
     pub fn update(&mut self) {
-        self.running = self.input.update(self.event_pump);
+        self.running = self.input.update(&mut self.event_pump);
 
         if self.running {
             self.canvas.present();
@@ -54,19 +56,4 @@ impl Engine{
 
     
 
-}
-
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
 }

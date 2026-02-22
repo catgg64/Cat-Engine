@@ -25,7 +25,7 @@ impl Input {
         self.pressed.contains(&key)
     }
 
-    pub fn update(&mut self, mut event_pump: EventPump) -> bool {
+    pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
         let mut running: bool = true;
         for event in event_pump.poll_iter() {
             match event {
