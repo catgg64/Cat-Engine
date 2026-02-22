@@ -57,3 +57,4 @@ impl Index<Scancode> for Input {
         }
     }
 }
+
