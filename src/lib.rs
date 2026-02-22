@@ -47,9 +47,8 @@ impl Engine{
     }
 
     pub fn update(&mut self) {
-        self.running = self.input.update(&mut self.event_pump);
-
         while self.running {
+            self.running = self.input.update(&mut self.event_pump);
             self.canvas.present();
         };
     }
