@@ -8,7 +8,7 @@ pub struct Engine {
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
     screen_rect: sdl2::rect::Rect,
-    input: input::Input,
+    pub input: input::Input,
     running: bool,
 }
 
@@ -42,6 +42,8 @@ impl Engine{
     
     pub fn clear_color(&mut self, color: color::Color) {
         let (r, g, b) = color.return_rgb();
+        self.canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 0, 0));
+        self.canvas.fill_rect(self.screen_rect);
         self.canvas.set_draw_color(sdl2::pixels::Color::RGB(r, g, b));
         self.canvas.fill_rect(self.screen_rect);
     }
