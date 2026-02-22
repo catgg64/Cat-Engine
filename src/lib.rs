@@ -1,5 +1,8 @@
 use sdl2::{libc::sleep, pixels::Color, *};
+use color::*;
+use input::*;
 pub mod color;
+pub mod input;
 
 pub struct Engine {
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -24,6 +27,7 @@ impl Engine{
 
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
 
+
         Ok(Self {
             canvas,
             event_pump,
@@ -34,7 +38,14 @@ impl Engine{
     pub fn clear_color(&mut self, color: color::Color) {
         let (r, g, b) = color.return_rgb();
         self.canvas.set_draw_color(sdl2::pixels::Color::RGB(r, g, b));
+        self.canvas.fill_rect(self.screen_rect);
     }
+
+    pub fn update(&mut self) {
+        self.canvas.present();
+    }
+
+    
 
 }
 
