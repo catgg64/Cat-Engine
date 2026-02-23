@@ -19,19 +19,32 @@ pub mod image {
 
 
     pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String, width: u32, height: u32) -> Result<render::Texture<'a>, String>{
-        Ok (texture_creator
-        .create_texture_streaming(
-            PixelFormatEnum::RGBA32,
-            width,
-            height,
-        )
-        .map_err(|e| e.to_string())?)
-    }
+        
+        let img = image::open(texture)
+            .expect("Failed to load image");
 
-    pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
-        let region_grabbed = region.get_x_y_sizex_sizey();
-        let actual_rect = sdl2::rect::Rect::new(region_grabbed.0 as i32, region_grabbed.1 as i32, region_grabbed.2 as u32, region_grabbed.3 as u32);
-        canvas.copy(texture, None, actual_rect)
+        let img = img.to_rgba8();
+        let (width, height) = img.dimensions();
+        let pixels = img.into_raw();
+        
+        let mut texture = texture_creator
+            .create_texture_streaming(
+                PixelFormatEnum::RGBA32,
+                width,
+                height,
+            )
+            .map_err(|e| e.to_string())?;
+            
+
+        texture.update(None, &pixels, (4 * width) as usize);
+        
+        Ok(texture)
+        }
+        
+        pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
+            let region_grabbed = region.get_x_y_sizex_sizey();
+            let actual_rect = sdl2::rect::Rect::new(region_grabbed.0 as i32, region_grabbed.1 as i32, region_grabbed.2 as u32, region_grabbed.3 as u32);
+            canvas.copy(texture, None, actual_rect)
     }
 
     pub mod draw {
