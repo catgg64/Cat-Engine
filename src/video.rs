@@ -18,14 +18,14 @@ pub mod image {
     use sdl2::pixels::PixelFormatEnum;
 
 
-    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String) -> Result<render::Texture<'a>, String>{
-        texture_creator
+    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String, width: u32, height: u32) -> Result<render::Texture<'a>, String>{
+        Ok (texture_creator
         .create_texture_streaming(
             PixelFormatEnum::RGBA32,
             width,
             height,
         )
-        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?)
     }
 
     pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
