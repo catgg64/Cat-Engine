@@ -1,16 +1,19 @@
-use sdl2::{libc::sleep, pixels::Color, sys::True, *};
+use sdl2::{libc::sleep, pixels::Color, render::TextureCreator, sys::True, video::WindowContext, *};
 use color::*;
 use input::*;
+use sdl2::image::*;
 pub mod color;
 pub mod input;
 pub mod video;
+pub mod shape;
 
 pub struct CatEngine {
-    canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
-    screen_rect: sdl2::rect::Rect,
+    pub screen_rect: sdl2::rect::Rect,
     pub input: input::Input,
     pub running: bool,
+    pub texture_creator: TextureCreator<WindowContext>,
 }
 
 impl CatEngine{
@@ -31,13 +34,15 @@ impl CatEngine{
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new();
         let mut running: bool = true;
+        let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
 
         Ok(Self {
             canvas, 
             event_pump,
             screen_rect,
             input,
-            running
+            running,
+            texture_creator,
         })
     }
     
