@@ -1,6 +1,5 @@
 use crate::color::Color;
 use sdl2::*;
-use sdl2::image::{ LoadTexture };
 use sdl2::render::TextureCreator;
 use sdl2::video::{ WindowContext };
 
@@ -12,16 +11,15 @@ pub fn clear_color(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color
 
 pub mod image {
     use sdl2::*;
-    use sdl2::image::{ LoadTexture };
     use sdl2::render::TextureCreator;
     use sdl2::video::{ WindowContext };
     use sdl2::rect;
     use crate::shape::rect::Rect;
 
 
-    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String) -> Result<render::Texture<'a>, String>{
-        texture_creator.load_texture(texture)
-    }
+    //pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String) -> Result<render::Texture<'a>, String>{
+    //    texture_creator.load_texture(texture)
+    //}
 
     pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
         let region_grabbed = region.get_x_y_sizex_sizey();
