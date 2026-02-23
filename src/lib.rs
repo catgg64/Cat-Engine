@@ -3,6 +3,7 @@ use color::*;
 use input::*;
 pub mod color;
 pub mod input;
+pub mod video;
 
 pub struct CatEngine {
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -32,7 +33,7 @@ impl CatEngine{
         let mut running: bool = true;
 
         Ok(Self {
-            canvas,
+            canvas, 
             event_pump,
             screen_rect,
             input,
@@ -40,11 +41,7 @@ impl CatEngine{
         })
     }
     
-    pub fn clear_color(&mut self, color: color::Color) {
-        let (r, g, b) = color.return_rgb();
-        self.canvas.set_draw_color(sdl2::pixels::Color::RGB(r, g, b));
-        self.canvas.fill_rect(self.screen_rect);
-    }
+    
 
     pub fn update(&mut self) {
         self.running = self.input.update(&mut self.event_pump);
