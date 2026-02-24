@@ -1,3 +1,5 @@
+use crate::shape::point::Point;
+
 pub struct Coordinate {
     x: i64,
     y: i64,
@@ -10,6 +12,10 @@ impl Coordinate {
     
     pub fn get_xy(&self) -> (i64, i64) {
         (self.x, self.y)
+    }
+
+    pub fn turn_into_point(&self) -> Point {
+        Point::new(self.x, self.y).unwrap()
     }
 }
 
