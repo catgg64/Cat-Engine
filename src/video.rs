@@ -36,9 +36,10 @@ pub mod image {
             .map_err(|e| e.to_string())?;
             
 
-        texture.update(None, &pixels, (4 * width) as usize);
-        
-        Ok(texture)
+            texture
+                .update(None, &pixels, (4 * width) as usize)
+                .map_err(|e| e.to_string())?;
+            Ok(texture)
         }
         
         pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
