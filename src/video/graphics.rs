@@ -34,19 +34,31 @@ impl ThirdDimensionCoordinate {
         (self.x, self.y, self.z)
     }
 
-    pub fn turn_into_xy(&self, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i64) -> Coordinate {
-        let x_player_distance = camera_x - self.x;
-        let y_player_distance = camera_y - self.y;
-        let z_player_distance = camera_z - self.z;
+    pub fn turn_into_xy(
+    &self,
+    camera_x: i64,
+    camera_y: i64,
+    camera_z: i64,
+    screen_width: i32,
+    screen_height: i32,
+    fov: i64,
+) -> Coordinate {
+        let dx = (self.x - camera_x) as f64;
+        let dy = (self.y - camera_y) as f64;
+        let dz = (self.z - camera_z) as f64;
 
+        if dz <= 0.0 {
+            return Coordinate::new(0, 0);
+        }
 
-        if z_player_distance > 0 {
-            let calc_x  = screen_width as i64 / 2 + x_player_distance * (fov / z_player_distance);
-            let calc_y =  screen_height as i64 / 2 + y_player_distance * (fov / z_player_distance);
-            Coordinate::new(calc_x, calc_y)
-        }
-        else {
-            Coordinate::new(0, 0)
-        }
+        let fov = fov as f64;
+
+        let projected_x = (dx * fov) / dz;
+        let projected_y = (dy * fov) / dz;
+
+        let screen_x = screen_width as f64 / 2.0 + projected_x;
+        let screen_y = screen_height as f64 / 2.0 + projected_y;
+
+        Coordinate::new(screen_x as i64, screen_y as i64)
     }
 }
