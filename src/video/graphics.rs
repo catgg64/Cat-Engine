@@ -41,8 +41,8 @@ impl ThirdDimensionCoordinate {
 
 
         if z_player_distance > 0 {
-            let calc_x  = screen_width as i64 / 2 + x_player_distance / (fov / z_player_distance);
-            let calc_y =  screen_height as i64 / 2 + y_player_distance / (fov / z_player_distance);
+            let calc_x  = screen_width as i64 / 2 + x_player_distance * (fov / z_player_distance);
+            let calc_y =  screen_height as i64 / 2 + y_player_distance * (fov / z_player_distance);
             Coordinate::new(calc_x, calc_y)
         }
         else {
