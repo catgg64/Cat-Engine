@@ -1,4 +1,4 @@
-use sdl2::pixels::{self, *};
+use sdl2::pixels::{self};
 
 pub struct Color {
     r: u8,

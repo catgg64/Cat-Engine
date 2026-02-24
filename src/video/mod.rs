@@ -1,19 +1,17 @@
 use crate::color::Color;
-use sdl2::*;
-use sdl2::render::TextureCreator;
-use sdl2::video::{ WindowContext };
+
+pub mod graphics;
 
 pub fn clear_color(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color: Color, screen_rect: sdl2::rect::Rect) {
     let (r, g, b) = color.return_rgb();
     canvas.set_draw_color(sdl2::pixels::Color::RGB(r, g, b));
-    canvas.fill_rect(screen_rect);
+    canvas.fill_rect(screen_rect).expect("error clearing screen:");
 }
 
 pub mod image {
     use sdl2::*;
     use sdl2::render::TextureCreator;
     use sdl2::video::{ WindowContext };
-    use sdl2::rect;
     use crate::shape::rect::Rect;
     use sdl2::pixels::PixelFormatEnum;
 
@@ -24,7 +22,6 @@ pub mod image {
             .expect("Failed to load image");
 
         let img = img.to_rgba8();
-        let (width, height) = img.dimensions();
         let pixels = img.into_raw();
         
         let mut texture = texture_creator
@@ -49,11 +46,10 @@ pub mod image {
     }
 
     pub mod draw {
-        use sdl2::rect::{ Rect, Point };
         use crate::shape;
         use crate::color;
 
-        pub fn line(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color: color::Color, point_1: shape::Point::Point, point_2: shape::Point::Point) -> Result<(), String> {
+        pub fn line(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color: color::Color, point_1: shape::point::Point, point_2: shape::point::Point) -> Result<(), String> {
             canvas.set_draw_color(color.turn_into_sdlcolor());
             canvas.draw_line(point_1.turn_into_sdl_point(), point_2.turn_into_sdl_point())
         }

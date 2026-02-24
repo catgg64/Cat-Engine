@@ -31,9 +31,7 @@ pub mod rect {
     }
 }
 
-pub mod Point {
-    use sdl2::rect::*;
-
+pub mod point {
     pub struct Point {
         x: i64,
         y: i64,

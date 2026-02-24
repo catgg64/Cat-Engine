@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use sdl2::{EventPump, event::Event, keyboard::Scancode};
+use sdl2::{ event::Event, keyboard::Scancode};
 use std::ops::Index;
 
 pub struct Input {

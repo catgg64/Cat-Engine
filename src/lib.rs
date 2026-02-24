@@ -1,5 +1,4 @@
-use sdl2::{libc::sleep, pixels::Color, render::TextureCreator, sys::True, video::WindowContext, *};
-use color::*;
+use sdl2::{ render::TextureCreator, video::WindowContext, *};
 use input::*;
 pub mod color;
 pub mod input;
