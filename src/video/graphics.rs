@@ -78,11 +78,11 @@ impl Cube {
     }
 
     pub fn draw(&self, cat_engine: &mut super::super::CatEngine, camera_x: i64, camera_y: i64, camera_z: i64) {
-        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.x, cat_engine.screen_rect.y, cat_engine.fov);
+        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width(), cat_engine.screen_rect.height(), cat_engine.fov);
         let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
+        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
