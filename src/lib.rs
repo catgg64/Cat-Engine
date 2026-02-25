@@ -58,6 +58,10 @@ impl CatEngine{
         self.fov = fov
     }    
 
+    pub fn get_fov(&self) -> i16 {
+        self.fov
+    }
+
 }
 
 pub mod keyboard {
