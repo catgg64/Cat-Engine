@@ -16,14 +16,14 @@ pub mod image {
     use sdl2::pixels::PixelFormatEnum;
 
 
-    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String, width: u32, height: u32) -> Result<render::Texture<'a>, String>{
+    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String) -> Result<render::Texture<'a>, String>{
         
         let img = image::open(texture)
             .expect("Failed to load image");
 
         let img = img.to_rgba8();
+        let (width, height) = img.dimensions();
         let pixels = img.into_raw();
-        
         let mut texture = texture_creator
             .create_texture_streaming(
                 PixelFormatEnum::RGBA32,

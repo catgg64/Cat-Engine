@@ -1,3 +1,5 @@
+use std::str::from_boxed_utf8_unchecked;
+
 use sdl2::{ render::TextureCreator, video::WindowContext, *};
 use input::*;
 pub mod color;
@@ -12,6 +14,7 @@ pub struct CatEngine {
     pub input: input::Input,
     pub running: bool,
     pub texture_creator: TextureCreator<WindowContext>,
+    fov: i16,
 }
 
 impl CatEngine{
@@ -33,6 +36,7 @@ impl CatEngine{
         let input: Input = input::Input::new();
         let mut running: bool = true;
         let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
+        let fov = 300;
 
         Ok(Self {
             canvas, 
@@ -41,6 +45,7 @@ impl CatEngine{
             input,
             running,
             texture_creator,
+            fov,
         })
     }
     
@@ -51,7 +56,9 @@ impl CatEngine{
         self.canvas.present();
     }
 
-    
+    pub fn set_fov(&mut self, fov: i16) {
+        self.fov = fov
+    }    
 
 }
 
