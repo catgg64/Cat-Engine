@@ -51,10 +51,6 @@ impl ThirdDimensionCoordinate {
         let dy = (self.y - camera_y) as f64;
         let dz = (self.z - camera_z) as f64;
 
-        if dz <= 0.0 {
-            return Err("out of bound error".to_string())
-        }
-
         let fov = fov as f64;
 
         let mut projected_x: f64 = 0.0;
