@@ -1,3 +1,6 @@
+use sdl2::render::Canvas;
+
+use crate::color::Color;
 use crate::shape::point::Point;
 use crate::video::image::draw;
 
@@ -64,6 +67,58 @@ impl ThirdDimensionCoordinate {
     }
 }
 
+pub struct Mesh {
+    vertices: Vec<ThirdDimensionCoordinate>,
+    edges: Vec<(usize, usize)>,
+}
+
+impl Mesh {
+    pub fn new(vertices: Vec<ThirdDimensionCoordinate>, edges: Vec<(usize, usize)>) -> Self {
+        Self {
+            vertices, edges,
+        }
+    }
+
+    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
+        for edge in &self.edges {
+            draw::line(canvas, color, self.vertices[edge.0].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point(), self.vertices[edge.1].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point());
+        }
+    }
+
+    pub fn append_cube(& mut self, cube: Cube) {
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y, cube.position.z));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z - cube.width));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y, cube.position.z - cube.width));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height, cube.position.z));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y - cube.height, cube.position.z));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height, cube.position.z - cube.width));
+        self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y - cube.height, cube.position.z - cube.width));
+    
+        self.edges.push((0, 1));
+        self.edges.push((0, 2));
+        self.edges.push((3, 2));
+        self.edges.push((3, 1));
+        self.edges.push((4, 5));
+        self.edges.push((4, 6));
+        self.edges.push((7, 6));
+        self.edges.push((7, 5));
+        self.edges.push((0, 4));
+        self.edges.push((1, 5));
+        self.edges.push((2, 6));
+        self.edges.push((3, 7));
+
+        // 0 = origin_point
+        // 1 = top_right_up_point
+        // 2 = top_left_bottom_point
+        // 3 = top_right_bottom_point
+        // 4 = bottom_left_up_point
+        // 5 = bottom_right_up_point
+        // 6 = bottom_left_bottom_point
+        // 7 = bottom_right_bottom_point
+    }
+}
+
 pub struct Cube {
     position: ThirdDimensionCoordinate,
     width: i64,
@@ -75,27 +130,27 @@ impl Cube {
         Self { position, width, height }
     }
 
-    pub fn draw(&self, cat_engine: &mut super::super::CatEngine, camera_x: i64, camera_y: i64, camera_z: i64) {
+    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
         let mut try_draw = |a: &Result<Coordinate, String>, 
                 b: &Result<Coordinate, String>| {
     
     if let (Ok(p1), Ok(p2)) = (a, b) {
         let _ = draw::line(
-            &mut cat_engine.canvas,
+            &mut canvas,
             crate::color::Color::new(255, 255, 255),
             p1.turn_into_point(),
             p2.turn_into_point(),
         );
     }
     };
-        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
-        let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
+        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
         
 
         try_draw( &origin_point, &top_right_up_point);

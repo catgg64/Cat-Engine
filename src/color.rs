@@ -1,5 +1,6 @@
 use sdl2::pixels::{self};
 
+#[derive(Copy, Clone)]
 pub struct Color {
     r: u8,
     g: u8,
