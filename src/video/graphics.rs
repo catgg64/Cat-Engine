@@ -57,9 +57,17 @@ impl ThirdDimensionCoordinate {
 
         let fov = fov as f64;
 
-        let projected_x = (dx * fov) / dz;
-        let projected_y = (dy * fov) / dz;
+        let mut projected_x: f64 = 0.0;
+        let mut projected_y: f64 = 0.0;
 
+        if dz == 0.0 {
+            projected_x = (dx * fov);
+            projected_y = (dx * fov);
+        }
+        else {
+            projected_x = (dx * fov) / dz;
+            projected_y = (dy * fov) / dz;
+        }
         let screen_x = screen_width as f64 / 2.0 + projected_x;
         let screen_y = screen_height as f64 / 2.0 + projected_y;
 
@@ -81,11 +89,11 @@ impl Mesh {
 
     pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
         for edge in &self.edges {
-            if self.vertices[edge.0].get_xyz().2 - camera_z > 0 || self.vertices[edge.1].get_xyz().2 - camera_z > 0 {
-                let point_1 = self.vertices[edge.0].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
-                let point_2 = self.vertices[edge.1].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
-                draw::line(canvas, color, point_1, point_2);
-            }
+            //if self.vertices[edge.0].get_xyz().2 - camera_z > 0 || self.vertices[edge.1].get_xyz().2 - camera_z > 0 {
+            let point_1 = self.vertices[edge.0].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
+            let point_2 = self.vertices[edge.1].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
+            draw::line(canvas, color, point_1, point_2);
+            //}
         }
     }
 
