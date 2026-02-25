@@ -58,7 +58,7 @@ impl CatEngine{
         self.fov = fov
     }    
 
-    pub fn get_fov(&self) -> i16 {
+    pub fn get_fov(&mut self) -> i16 {
         self.fov
     }
 
