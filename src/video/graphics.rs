@@ -50,9 +50,9 @@ impl ThirdDimensionCoordinate {
         let y_player_distance = camera_y - self.y;
         let z_player_distance = camera_z - self.z;
         if z_player_distance > 0 { 
-            let calc_x = screen_width as i64 / 2 + x_player_distance / (z_player_distance/ fov as i64);
-            let calc_y = screen_height as i64 / 2 + y_player_distance / (z_player_distance / fov as i64);
-            Coordinate::new(calc_x, calc_y) } 
+            let calc_x = screen_width as f64 / 2.0 + x_player_distance as f64 / (z_player_distance as f64 / fov as f64);
+            let calc_y = screen_height as f64 / 2.0 + y_player_distance as f64 / (z_player_distance as f64 / fov as f64);
+            Coordinate::new(calc_x as i64, calc_y as i64) } 
         else { 
             Coordinate::new(0, 0)
         }
