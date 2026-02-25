@@ -1,3 +1,5 @@
+use std::fmt::Error;
+
 use sdl2::libc::winsize;
 
 use crate::shape::point::Point;
@@ -45,13 +47,13 @@ impl ThirdDimensionCoordinate {
     screen_width: i32,
     screen_height: i32,
     fov: i16,
-) -> Coordinate {
+) -> Result<Coordinate, String> {
         let dx = (self.x - camera_x) as f64;
         let dy = (self.y - camera_y) as f64;
         let dz = (self.z - camera_z) as f64;
 
         if dz <= 0.0 {
-            return Coordinate::new(0, 0);
+            return Err("out of bound error".to_string())
         }
 
         let fov = fov as f64;
@@ -62,7 +64,7 @@ impl ThirdDimensionCoordinate {
         let screen_x = screen_width as f64 / 2.0 + projected_x;
         let screen_y = screen_height as f64 / 2.0 + projected_y;
 
-        Coordinate::new(screen_x as i64, screen_y as i64)
+        Ok(Coordinate::new(screen_x as i64, screen_y as i64))
     }
 }
 
@@ -78,6 +80,18 @@ impl Cube {
     }
 
     pub fn draw(&self, cat_engine: &mut super::super::CatEngine, camera_x: i64, camera_y: i64, camera_z: i64) {
+        let mut try_draw = |a: &Result<Coordinate, String>, 
+                b: &Result<Coordinate, String>| {
+    
+    if let (Ok(p1), Ok(p2)) = (a, b) {
+        let _ = draw::line(
+            &mut cat_engine.canvas,
+            crate::color::Color::new(255, 255, 255),
+            p1.turn_into_point(),
+            p2.turn_into_point(),
+        );
+    }
+    };
         let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
@@ -86,19 +100,19 @@ impl Cube {
         let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
         let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, cat_engine.screen_rect.width() as i32, cat_engine.screen_rect.height() as i32, cat_engine.fov);
+        
 
-
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), origin_point.turn_into_point(), top_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), origin_point.turn_into_point(), top_left_bottom_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_bottom_point.turn_into_point(), top_left_bottom_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_bottom_point.turn_into_point(), top_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_left_up_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_left_up_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_right_bottom_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_right_bottom_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), origin_point.turn_into_point(), bottom_left_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_up_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_left_bottom_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_bottom_point.turn_into_point(), bottom_right_bottom_point.turn_into_point()).unwrap();
+        try_draw( &origin_point, &top_right_up_point);
+        try_draw( &origin_point, &top_left_bottom_point);
+        try_draw( &top_right_bottom_point, &top_left_bottom_point);
+        try_draw( &top_right_bottom_point, &top_right_up_point);
+        try_draw( &bottom_left_up_point, &bottom_right_up_point);
+        try_draw( &bottom_left_up_point, &bottom_left_bottom_point);
+        try_draw( &bottom_right_bottom_point, &bottom_left_bottom_point);
+        try_draw( &bottom_right_bottom_point, &bottom_right_up_point);
+        try_draw( &origin_point, &bottom_left_up_point);
+        try_draw( &top_right_up_point, &bottom_right_up_point);
+        try_draw( &top_left_bottom_point, &bottom_left_bottom_point);
+        try_draw( &top_right_bottom_point, &bottom_right_bottom_point);
         }
 }
