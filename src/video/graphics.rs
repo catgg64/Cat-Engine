@@ -96,7 +96,7 @@ impl Cube {
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_left_up_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_right_bottom_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), bottom_right_bottom_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
-        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), origin_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
+        draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), origin_point.turn_into_point(), bottom_left_up_point.turn_into_point()).unwrap();
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_up_point.turn_into_point(), bottom_right_up_point.turn_into_point()).unwrap();
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_left_bottom_point.turn_into_point(), bottom_left_bottom_point.turn_into_point()).unwrap();
         draw::line(&mut cat_engine.canvas, crate::color::Color::new(255, 255, 255), top_right_bottom_point.turn_into_point(), bottom_right_bottom_point.turn_into_point()).unwrap();
