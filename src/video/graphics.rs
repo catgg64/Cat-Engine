@@ -1,7 +1,7 @@
 use sdl2::render::Canvas;
 
 use crate::color::Color;
-use crate::shape::point::Point;
+use crate::shape::point::{self, Point};
 use crate::video::image::draw;
 
 pub struct Coordinate {
@@ -81,7 +81,11 @@ impl Mesh {
 
     pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
         for edge in &self.edges {
-            draw::line(canvas, color, self.vertices[edge.0].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point(), self.vertices[edge.1].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point());
+            if self.vertices[edge.0].get_xyz().2 > 0 || self.vertices[edge.1].get_xyz().2 > 0 {
+                let point_1 = self.vertices[edge.0].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
+                let point_2 = self.vertices[edge.1].turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov).unwrap().turn_into_point();
+                draw::line(canvas, color, point_1, point_2);
+            }
         }
     }
 
