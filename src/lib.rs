@@ -1,5 +1,3 @@
-use std::str::from_boxed_utf8_unchecked;
-
 use sdl2::{ render::TextureCreator, video::WindowContext, *};
 use input::*;
 pub mod color;

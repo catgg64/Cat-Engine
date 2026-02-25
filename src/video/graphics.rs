@@ -1,7 +1,3 @@
-use std::fmt::Error;
-
-use sdl2::libc::winsize;
-
 use crate::shape::point::Point;
 use crate::video::image::draw;
 

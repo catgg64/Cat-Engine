@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use sdl2::{ event::Event, keyboard::Scancode};
 use std::ops::Index;
 
@@ -23,6 +23,20 @@ impl Input {
 
     pub fn is_down(&self, key: Scancode) -> bool {
         self.pressed.contains(&key)
+    }
+
+    pub fn mouse_buttons_down(&self, event_pump: &mut sdl2::EventPump) -> HashMap<&str, bool> {
+        let mut pressed = HashMap::new();
+        pressed.insert("left", event_pump.mouse_state().left());
+        pressed.insert("middle", event_pump.mouse_state().middle());
+        pressed.insert("right", event_pump.mouse_state().right());
+        pressed.insert("x1", event_pump.mouse_state().x1());
+        pressed.insert("x2", event_pump.mouse_state().x2());
+        pressed
+    }
+
+    pub fn get_mouse_pos(&self, event_pump: &mut sdl2::EventPump) -> (i32, i32) {
+        (event_pump.mouse_state().x(), event_pump.mouse_state().y())
     }
 
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
