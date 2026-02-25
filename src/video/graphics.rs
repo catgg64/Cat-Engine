@@ -57,7 +57,7 @@ impl ThirdDimensionCoordinate {
         let mut projected_y: f64 = 0.0;
         let mut wrong: bool = false;
 
-        if dz == 0.0 {
+        if dz <= 0.0 {
             return Err("out of bounds".to_string());
         }
         else {
