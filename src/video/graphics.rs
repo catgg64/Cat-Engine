@@ -86,6 +86,8 @@ impl Mesh {
     }
 
     pub fn append_cube(& mut self, cube: Cube) {
+        let base_index = self.vertices.len();
+
         self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z));
         self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y, cube.position.z));
         self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z - cube.width));
@@ -95,18 +97,18 @@ impl Mesh {
         self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height, cube.position.z - cube.width));
         self.vertices.push(ThirdDimensionCoordinate::new(cube.position.x + cube.width, cube.position.y - cube.height, cube.position.z - cube.width));
     
-        self.edges.push((0, 1));
-        self.edges.push((0, 2));
-        self.edges.push((3, 2));
-        self.edges.push((3, 1));
-        self.edges.push((4, 5));
-        self.edges.push((4, 6));
-        self.edges.push((7, 6));
-        self.edges.push((7, 5));
-        self.edges.push((0, 4));
-        self.edges.push((1, 5));
-        self.edges.push((2, 6));
-        self.edges.push((3, 7));
+        self.edges.push((base_index + 0, base_index + 1));
+        self.edges.push((base_index + 0, base_index + 2));
+        self.edges.push((base_index + 3, base_index + 2));
+        self.edges.push((base_index + 3, base_index + 1));
+        self.edges.push((base_index + 4, base_index + 5));
+        self.edges.push((base_index + 4, base_index + 6));
+        self.edges.push((base_index + 7, base_index + 6));
+        self.edges.push((base_index + 7, base_index + 5));
+        self.edges.push((base_index + 0, base_index + 4));
+        self.edges.push((base_index + 1, base_index + 5));
+        self.edges.push((base_index + 2, base_index + 6));
+        self.edges.push((base_index + 3, base_index + 7));
 
         // 0 = origin_point
         // 1 = top_right_up_point
