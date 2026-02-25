@@ -61,8 +61,14 @@ impl ThirdDimensionCoordinate {
             projected_y = (dx * fov);
         }
         else {
+            if dz > 0.0 {
             projected_x = (dx * fov) / dz;
             projected_y = (dy * fov) / dz;
+            }
+            else {
+                projected_x = (dx * fov) * dz * (-1);
+                projected_y = (dy * fov) * dz * (-1);
+            }
         }
         let screen_x = screen_width as f64 / 2.0 + projected_x;
         let screen_y = screen_height as f64 / 2.0 + projected_y;
