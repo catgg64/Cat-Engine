@@ -50,7 +50,7 @@ pub mod point {
         }
 
         pub fn turn_into_sdl_point(&self) -> sdl2::rect::Point {
-            sdl2::rect::Point::new(self.x as i32, self.y as i32)
+            sdl2::rect::Point::new(self.x.round() as i32, self.y.round() as i32)
         }
     }
 }
