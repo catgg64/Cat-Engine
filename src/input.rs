@@ -1,15 +1,23 @@
 use std::collections::{HashMap, HashSet};
-use sdl2::{ event::Event, keyboard::Scancode};
+use sdl2::rect::Point;
+use sdl2::{ Sdl, event::Event, keyboard::Scancode };
 use std::ops::Index;
+use sdl2::mouse::MouseUtil;
+use sdl2::video::Window;
 
 pub struct Input {
     pressed: HashSet<Scancode>,
+    mouse_util: MouseUtil,
+    mouse_delta: (i32, i32),
 }
 
 impl Input {
-    pub fn new() -> Self {
+    pub fn new(sdl_context: Sdl) -> Self {
+        let mouse_util = sdl_context.mouse();
         Self {
             pressed: HashSet::new(),
+            mouse_util,
+            mouse_delta: (0, 0),
         }
     }
 
@@ -39,7 +47,20 @@ impl Input {
         (event_pump.mouse_state().x(), event_pump.mouse_state().y())
     }
 
+    pub fn set_relative_mouse_position(&self) {
+        self.mouse_util.set_relative_mouse_mode(true);
+    }
+
+    pub fn set_mouse_visibility(&self, visibility: bool) {
+        self.mouse_util.show_cursor(visibility);
+    }
+
+    pub fn set_mouse_position(&self, position: crate::shape::point::Point, window: &Window) {
+        self.mouse_util.warp_mouse_in_window(window, position.return_xy().0 as i32, position.return_xy().1 as i32);
+    }
+
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
+        self.mouse_delta = (0, 0);
         let mut running: bool = true;
         for event in event_pump.poll_iter() {
             match event {
@@ -51,6 +72,9 @@ impl Input {
                 },
                 Event::KeyUp { scancode: Some(key), .. } => {
                     self.release(key);
+                },
+                Event::MouseMotion { xrel, yrel, .. } => {
+                    self.mouse_delta = (xrel, yrel);
                 },
                 _ => {},
             }

@@ -31,7 +31,7 @@ impl CatEngine{
             .map_err(|e| e.to_string())?;
 
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
-        let input: Input = input::Input::new();
+        let input: Input = input::Input::new(context);
         let mut running: bool = true;
         let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
         let fov = 300;
