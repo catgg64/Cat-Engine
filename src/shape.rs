@@ -33,19 +33,19 @@ pub mod rect {
 
 pub mod point {
     pub struct Point {
-        x: i64,
-        y: i64,
+        x: f64,
+        y: f64,
     }
 
     impl Point {
-        pub fn new(x: i64, y: i64) -> Result<Point, String> {
+        pub fn new(x: f64, y: f64) -> Result<Point, String> {
             Ok (Self {
                 x: x,
                 y: y,
             })
         }
 
-        pub fn return_xy(&self) -> (i64, i64) {
+        pub fn return_xy(&self) -> (f64, f64) {
             (self.x, self.y)
         }
 
