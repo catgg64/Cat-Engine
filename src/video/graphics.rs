@@ -80,7 +80,7 @@ impl ThirdDimensionCoordinate {
         let mut projected_x: f64 = 0.0;
         let mut projected_y: f64 = 0.0;
 
-        if dz <= 0.0 {
+        if dz <= 0.1 {
             return Err("out of bounds".to_string());
         }
         else {
