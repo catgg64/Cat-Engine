@@ -74,9 +74,19 @@ impl ThirdDimensionCoordinate {
         let yaw_radians = (yaw as f64).to_radians();
         let pitch_radians = (pitch as f64).to_radians();
 
-        let (dx, dz) = rotate((0.0, 0.0), (dx, dz), yaw_radians);
-        let (dy, dz) = rotate((0.0, 0.0), (dy, dz), pitch_radians);
+        let mut dx = dx;
+        let mut dy = dy;
+        let mut dz = dz;
 
+        // Yaw (rotate around Y axis)
+        let (new_dx, new_dz) = rotate((0.0, 0.0), (dx, dz), yaw as f64);
+        dx = new_dx;
+        dz = new_dz;
+
+        // Pitch (rotate around X axis)
+        let (new_dy, new_dz) = rotate((0.0, 0.0), (dy, dz), pitch as f64);
+        dy = new_dy;
+        dz = new_dz;
         let mut projected_x: f64 = 0.0;
         let mut projected_y: f64 = 0.0;
 
