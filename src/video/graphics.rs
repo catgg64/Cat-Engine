@@ -3,7 +3,24 @@ use sdl2::render::Canvas;
 use crate::color::Color;
 use crate::shape::point::{self, Point};
 use crate::video::image::draw;
+use std::f64::consts::PI;
 
+pub fn rotate(
+    origin: (f64, f64),
+    point: (f64, f64),
+    angle: f64,
+) -> (f64, f64) {
+    let (ox, oy) = origin;
+    let (px, py) = point;
+
+    let cos_theta = angle.cos();
+    let sin_theta = angle.sin();
+
+    let qx = ox + cos_theta * (px - ox) - sin_theta * (py - oy);
+    let qy = oy + sin_theta * (px - ox) + cos_theta * (py - oy);
+
+    (qx, qy)
+}
 pub struct Coordinate {
     x: i64,
     y: i64,
@@ -46,6 +63,8 @@ impl ThirdDimensionCoordinate {
     screen_width: i32,
     screen_height: i32,
     fov: i16,
+    yaw: i32,
+    pitch: i32,
 ) -> Result<Coordinate, String> {
         let dx = (self.x - camera_x) as f64;
         let dy = (self.y - camera_y) as f64;
@@ -53,9 +72,11 @@ impl ThirdDimensionCoordinate {
 
         let fov = fov as f64;
 
+        let (dx, dz) = rotate((0.0, 0.0), (dx, dz), yaw as f64);
+        let (dy, dz) = rotate((0.0, 0.0), (dy, dz), yaw as f64);
+
         let mut projected_x: f64 = 0.0;
         let mut projected_y: f64 = 0.0;
-        let mut wrong: bool = false;
 
         if dz <= 0.0 {
             return Err("out of bounds".to_string());
@@ -85,13 +106,13 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
+    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16, yaw: i32, pitch: i32) {
         for edge in &self.edges {
             let a = self.vertices[edge.0]
-                .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+                .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
 
             let b = self.vertices[edge.1]
-                .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+                .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
 
             if let (Ok(p1), Ok(p2)) = (a, b) {
                 draw::line(canvas, color, p1.turn_into_point(), p2.turn_into_point());
@@ -146,7 +167,7 @@ impl Cube {
         Self { position, width, height }
     }
 
-    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16) {
+    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: i64, camera_y: i64, camera_z: i64, screen_width: i32, screen_height: i32, fov: i16, yaw: i32, pitch: i32) {
         let mut try_draw = |a: &Result<Coordinate, String>, 
                 b: &Result<Coordinate, String>| {
     
@@ -159,14 +180,14 @@ impl Cube {
         );
     }
     };
-        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
-        let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov);
+        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+        let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width, self.position.y - self.height, self.position.z - self.width).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
         
 
         try_draw( &origin_point, &top_right_up_point);

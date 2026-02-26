@@ -59,6 +59,16 @@ impl Input {
         self.mouse_util.warp_mouse_in_window(window, position.return_xy().0 as i32, position.return_xy().1 as i32);
     }
 
+    pub fn get_mouse_delta(&self) -> (i32, i32) {
+        self.mouse_delta
+    }
+
+    pub fn update_yaw_and_pitch(&self, sensitivity: f32) -> (i32, i32) {
+        let yaw = self.mouse_delta.0 as f32 * sensitivity;
+        let pitch = self.mouse_delta.1 as f32 * sensitivity;
+        (yaw as i32, pitch as i32)
+    }
+
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
