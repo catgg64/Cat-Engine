@@ -66,11 +66,11 @@ impl Input {
     pub fn update_yaw_and_pitch(
         &self,
         sensitivity: f32,
-        yaw: &mut f32,
-        pitch: &mut f32,
+        yaw: &mut f64,
+        pitch: &mut f64,
     ) {
-        *yaw += self.mouse_delta.0 as f32 * sensitivity;
-        *pitch += self.mouse_delta.1 as f32 * sensitivity;
+        *yaw += self.mouse_delta.0 as f64 * sensitivity as f64;
+        *pitch += self.mouse_delta.1 as f64 * sensitivity as f64;
 
         // Optional: clamp pitch so camera doesn’t flip
         *pitch = pitch.clamp(-89.0, 89.0);

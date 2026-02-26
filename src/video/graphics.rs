@@ -63,8 +63,8 @@ impl ThirdDimensionCoordinate {
     screen_width: i32,
     screen_height: i32,
     fov: i16,
-    yaw: i32,
-    pitch: i32,
+    yaw: f64,
+    pitch: f64,
 ) -> Result<Coordinate, String> {
         let dx = (self.x - camera_x) as f64;
         let dy = (self.y - camera_y) as f64;
@@ -118,7 +118,7 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: i32, pitch: i32) {
+    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
         for edge in &self.edges {
             let a = self.vertices[edge.0]
                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
@@ -179,7 +179,7 @@ impl Cube {
         Self { position, width, height }
     }
 
-    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: i32, pitch: i32) {
+    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
         let mut try_draw = |a: &Result<Coordinate, String>, 
                 b: &Result<Coordinate, String>| {
     
