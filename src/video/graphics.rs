@@ -71,9 +71,11 @@ impl ThirdDimensionCoordinate {
         let dz = (self.z - camera_z) as f64;
 
         let fov = fov as f64;
+        let yaw_radians = (yaw as f64).to_radians();
+        let pitch_radians = (pitch as f64).to_radians();
 
-        let (dx, dz) = rotate((0.0, 0.0), (dx, dz), yaw as f64);
-        let (dy, dz) = rotate((0.0, 0.0), (dy, dz), yaw as f64);
+        let (dx, dz) = rotate((0.0, 0.0), (dx, dz), yaw_radians);
+        let (dy, dz) = rotate((0.0, 0.0), (dy, dz), pitch_radians);
 
         let mut projected_x: f64 = 0.0;
         let mut projected_y: f64 = 0.0;
