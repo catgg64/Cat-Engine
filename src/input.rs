@@ -63,10 +63,10 @@ impl Input {
         self.mouse_delta
     }
 
-    pub fn update_yaw_and_pitch(&self, sensitivity: f32) -> (i32, i32) {
-        let yaw = self.mouse_delta.0 as f32 * sensitivity;
-        let pitch = self.mouse_delta.1 as f32 * sensitivity;
-        (yaw as i32, pitch as i32)
+    pub fn update_yaw_and_pitch<'a>(&self, sensitivity: f32, yaw: &'a mut f32, pitch: &'a mut f32) -> (&'a mut f32, &'a mut f32) {
+        *yaw = self.mouse_delta.0 as f32 * sensitivity;
+        *pitch = self.mouse_delta.1 as f32 * sensitivity;
+        (yaw, pitch)
     }
 
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
