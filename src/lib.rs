@@ -1,5 +1,6 @@
 use sdl2::{ render::TextureCreator, video::WindowContext, *};
 use input::*;
+use sdl2::video::GLProfile;
 pub mod color;
 pub mod input;
 pub mod video;
@@ -22,6 +23,7 @@ impl CatEngine{
         let window = video_subsystem
             .window(title, width, height)
             .position_centered()
+            .opengl()
             .build()
             .map_err(|e| e.to_string())?;let event_pump: EventPump = context.event_pump()?;
         let canvas = window

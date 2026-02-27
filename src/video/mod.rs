@@ -10,7 +10,7 @@ pub fn clear_color(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color
 
 pub mod image {
     use sdl2::*;
-    use sdl2::render::TextureCreator;
+    use sdl2::render::{Canvas, TextureCreator};
     use sdl2::video::{ WindowContext };
     use crate::shape::rect::Rect;
     use sdl2::pixels::PixelFormatEnum;
@@ -39,11 +39,19 @@ pub mod image {
             Ok(texture)
         }
         
-        pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
-            let region_grabbed = region.get_x_y_sizex_sizey();
-            let actual_rect = sdl2::rect::Rect::new(region_grabbed.0 as i32, region_grabbed.1 as i32, region_grabbed.2 as u32, region_grabbed.3 as u32);
-            canvas.copy(texture, None, actual_rect)
+    pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
+        let region_grabbed = region.get_x_y_sizex_sizey();
+        let actual_rect = sdl2::rect::Rect::new(region_grabbed.0 as i32, region_grabbed.1 as i32, region_grabbed.2 as u32, region_grabbed.3 as u32);
+        canvas.copy(texture, None, actual_rect)
     }
+
+    //pub fn stretch_blit<'a>(canvas: Canvas<sdl2::render::Canvas<sdl2::video::Window>, texture: &'a render::Texture, x: i32, y: i32, xx: i32, xy: i32) -> &'a render::Texture<'a> {
+    //    let (width, height) = (texture.query().width, texture.query().height);
+    //    for x in width {
+    //        scr = sdl2::rect::Rect::new(x, height, 1, height)
+    //    }
+    //    
+    //}
 
     pub mod draw {
         use crate::shape;
