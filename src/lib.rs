@@ -15,6 +15,7 @@ pub struct CatEngine {
     pub input: input::Input,
     pub running: bool,
     pub window: Window,
+    pub renderer: Renderer,
     fov: i16,
 }
 
@@ -32,6 +33,7 @@ impl CatEngine{
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
         let mut running: bool = true;
+        let mut renderer = Renderer::new(width as f32, height as f32);
         let fov = 300;
 
         Ok(Self {
@@ -40,6 +42,7 @@ impl CatEngine{
             input,
             running,
             window,
+            renderer,
             fov,
         })
     }
