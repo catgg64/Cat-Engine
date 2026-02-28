@@ -289,6 +289,7 @@ impl Shader {
 
             let vertex = gl::CreateShader(gl::VERTEX_SHADER);
             gl::ShaderSource(vertex, 1, &v_src.as_ptr(), std::ptr::null());
+            gl::CompileShader(vertex);
             let mut success = 0;
             gl::GetShaderiv(vertex, gl::COMPILE_STATUS, &mut success);
 
@@ -311,6 +312,7 @@ impl Shader {
 
             let fragment = gl::CreateShader(gl::FRAGMENT_SHADER);
             gl::ShaderSource(fragment, 1, &f_src.as_ptr(), std::ptr::null());
+            gl::CompileShader(fragment);
             let mut success = 0;
             gl::GetShaderiv(fragment, gl::COMPILE_STATUS, &mut success);
 
