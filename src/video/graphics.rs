@@ -121,7 +121,7 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, renderer: Renderer, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
+    pub fn draw(&self, renderer: &Renderer, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
         for edge in &self.edges {
             let a = self.vertices[edge.0]
                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
