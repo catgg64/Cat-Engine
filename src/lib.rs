@@ -282,7 +282,7 @@ impl Renderer {
         line_shader.bind();
         line_shader.set_mat4("projection", &projection);
 
-        let cube_texture = surface::Surface::new("me.png");
+        let cube_texture = surface::Surface::new("mel.png");
 
         Renderer {
             quad_vao, // <-- you must initialize this properly later
