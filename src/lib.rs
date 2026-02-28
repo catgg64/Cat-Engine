@@ -77,6 +77,7 @@ impl Renderer {
     pub fn new(screen_width: f32, screen_height: f32) -> Self {
         let mut line_vao = 0;
         let mut line_vbo = 0;
+        let mut quad_vao = 0;
 
         unsafe {
             gl::GenVertexArrays(1, &mut line_vao);
@@ -101,7 +102,6 @@ impl Renderer {
                 std::ptr::null(),
             );
             gl::EnableVertexAttribArray(0);
-            let mut quad_vao = 0;
             let mut quad_vbo = 0;
 
             unsafe {
@@ -178,7 +178,7 @@ impl Renderer {
         line_shader.set_mat4("projection", &projection);
 
         Renderer {
-            quad_vao: 0, // <-- you must initialize this properly later
+            quad_vao, // <-- you must initialize this properly later
             shader,
             projection,
             line_vao,
@@ -216,6 +216,15 @@ impl Renderer {
 
         unsafe {
             gl::BindBuffer(gl::ARRAY_BUFFER, self.line_vbo);
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                3 * std::mem::size_of::<f32>() as i32,
+                std::ptr::null(),
+            );
+            gl::EnableVertexAttribArray(0);
             gl::BufferSubData(
                 gl::ARRAY_BUFFER,
                 0,
