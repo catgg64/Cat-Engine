@@ -5,10 +5,12 @@ use crate::color::Color;
 use crate::shape::point::{self, Point};
 use crate::video::surface::Surface;
 use std::f64::consts::PI;
-use std::ffi::CString;
 use std::fs::ReadDir;
 use glam::Vec3;
 use std::sync::Arc;
+use std::ffi::CString;
+use std::ptr;
+
 
 pub fn rotate(
     origin: (f64, f64),
@@ -315,6 +317,21 @@ impl Shader {
         unsafe {
             let location = gl::GetUniformLocation(self.program_id, cname.as_ptr());
             gl::Uniform3f(location, value.x, value.y, value.z);
+        }
+    }
+
+    pub fn use_program(&self) {
+        unsafe {
+            gl::UseProgram(self.program_id);
+        }
+    }
+    pub fn set_int(&self, name: &str, value: i32) {
+        let cname = CString::new(name).unwrap();
+        unsafe {
+            gl::Uniform1i(
+                gl::GetUniformLocation(self.program_id, cname.as_ptr()),
+                value,
+            );
         }
     }
 }

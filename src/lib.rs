@@ -4,6 +4,8 @@ use sdl2::video::GLProfile;
 use video::surface::Surface;
 use video::graphics::Shader;
 use glam::{ Mat4, Vec3 };
+
+use crate::video::surface;
 pub mod color;
 pub mod input;
 pub mod video;
@@ -68,6 +70,24 @@ impl CatEngine{
         self.fov
     }
 
+    pub fn get_camera_specs(&self, cam_x: f32, cam_y: f32, cam_z: f32, yaw: f32, pitch: f32) -> (Vec3, Vec3, Mat4){
+        let camera_position = Vec3::new(cam_x, cam_y, cam_z);
+
+        let front = Vec3::new(
+            yaw.cos() * pitch.cos(),
+            pitch.sin(),
+            yaw.sin() * pitch.cos(),
+        ).normalize();
+
+        let view_matrix = Mat4::look_at_rh(
+            camera_position,
+            camera_position + front,
+            Vec3::Y,
+        );
+
+        (camera_position, front, view_matrix)
+    }
+
     pub fn clear_color(&self, color: color::Color) {
         unsafe {
             let (r, g, b) = color.return_rgb();
@@ -84,6 +104,9 @@ pub struct Renderer {
     line_vao: u32,
     line_vbo: u32,
     line_shader: Shader,
+    cube_vao: u32,
+    cube_vbo: u32,
+    cube_texture: Surface,
 }
 impl Renderer {
     pub fn new(screen_width: f32, screen_height: f32) -> Self {
@@ -171,6 +194,75 @@ impl Renderer {
             }
         }
 
+        let vertices: [f32; 180] = [
+            // positions       // UVs
+            -0.5,-0.5, 0.5, 0.0,0.0,
+            0.5,-0.5, 0.5, 1.0,0.0,
+            0.5, 0.5, 0.5, 1.0,1.0,
+            0.5, 0.5, 0.5, 1.0,1.0,
+            -0.5, 0.5, 0.5, 0.0,1.0,
+            -0.5,-0.5, 0.5, 0.0,0.0,
+
+            -0.5,-0.5,-0.5, 1.0,0.0,
+            -0.5, 0.5,-0.5, 1.0,1.0,
+            0.5, 0.5,-0.5, 0.0,1.0,
+            0.5, 0.5,-0.5, 0.0,1.0,
+            0.5,-0.5,-0.5, 0.0,0.0,
+            -0.5,-0.5,-0.5, 1.0,0.0,
+
+            -0.5, 0.5, 0.5, 1.0,0.0,
+            -0.5, 0.5,-0.5, 1.0,1.0,
+            -0.5,-0.5,-0.5, 0.0,1.0,
+            -0.5,-0.5,-0.5, 0.0,1.0,
+            -0.5,-0.5, 0.5, 0.0,0.0,
+            -0.5, 0.5, 0.5, 1.0,0.0,
+
+            0.5, 0.5, 0.5, 0.0,0.0,
+            0.5,-0.5,-0.5, 1.0,1.0,
+            0.5, 0.5,-0.5, 0.0,1.0,
+            0.5,-0.5,-0.5, 1.0,1.0,
+            0.5, 0.5, 0.5, 0.0,0.0,
+            0.5,-0.5, 0.5, 1.0,0.0,
+
+            -0.5, 0.5,-0.5, 0.0,1.0,
+            -0.5, 0.5, 0.5, 0.0,0.0,
+            0.5, 0.5, 0.5, 1.0,0.0,
+            0.5, 0.5, 0.5, 1.0,0.0,
+            0.5, 0.5,-0.5, 1.0,1.0,
+            -0.5, 0.5,-0.5, 0.0,1.0,
+
+            -0.5,-0.5,-0.5, 1.0,1.0,
+            0.5,-0.5, 0.5, 0.0,0.0,
+            -0.5,-0.5, 0.5, 1.0,0.0,
+            0.5,-0.5, 0.5, 0.0,0.0,
+            -0.5,-0.5,-0.5, 1.0,1.0,
+            0.5,-0.5,-0.5, 0.0,1.0,
+        ];
+
+        let mut cube_vao = 0;
+        let mut cube_vbo = 0;
+
+        unsafe {
+            gl::GenVertexArrays(1, &mut cube_vao);
+            gl::GenBuffers(1, &mut cube_vbo);
+
+            gl::BindVertexArray(cube_vao);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, cube_vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+
+            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 5 * 4, std::ptr::null());
+            gl::EnableVertexAttribArray(0);
+
+            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 5 * 4, (3 * 4) as *const _);
+            gl::EnableVertexAttribArray(1);
+        }
+        
         let line_shader = Shader::new("line.vert", "line.frag");
 
         let shader = Shader::new("quad.vert", "quad.frag");
@@ -190,6 +282,8 @@ impl Renderer {
         line_shader.bind();
         line_shader.set_mat4("projection", &projection);
 
+        let cube_texture = surface::Surface::new("me.png");
+
         Renderer {
             quad_vao, // <-- you must initialize this properly later
             shader,
@@ -197,6 +291,9 @@ impl Renderer {
             line_vao,
             line_vbo,
             line_shader,
+            cube_vao,
+            cube_vbo,
+            cube_texture,
         }
     }
     
@@ -250,6 +347,29 @@ impl Renderer {
 
             gl::BindVertexArray(self.line_vao);
             gl::DrawArrays(gl::LINES, 0, 2);
+        }
+    }
+
+    pub fn draw_cube(&self, view: Mat4, position: glam::Vec3) {
+
+        self.shader.use_program();
+
+        self.shader.set_mat4("projection", &self.projection);
+        self.shader.set_mat4("view", &view);
+
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, self.cube_texture.texture_id);
+        }
+
+        self.shader.set_int("tex", 0);
+
+        let model = Mat4::from_translation(position);
+        self.shader.set_mat4("model", &model);
+
+        unsafe {
+            gl::BindVertexArray(self.cube_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
 }
