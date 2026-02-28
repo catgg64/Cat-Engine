@@ -34,6 +34,9 @@ impl CatEngine{
             .map_err(|e| e.to_string())?;let event_pump: EventPump = context.event_pump()?;
         let _gl_context = window.gl_create_context()?;
         gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
+        unsafe {
+            gl::Viewport(0, 0, width as i32, height as i32);
+        }
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
         let mut running: bool = true;
