@@ -278,6 +278,8 @@ pub struct Shader {
 
 impl Shader {
     pub fn new(vertex_src: &str, fragment_src: &str) -> Self {
+        let og_vertex_scr = vertex_src.clone();
+        let og_fragment_src = fragment_src.clone();
         let vertex_src = std::fs::read_to_string(vertex_src).expect("Failed to read vertex shader");
         let fragment_src = std::fs::read_to_string(fragment_src).expect("Failed to read fragment shader");
 
@@ -303,6 +305,8 @@ impl Shader {
                 );
 
                 println!("VERTEX SHADER ERROR: {}", error.to_string_lossy());
+                println!("Loading vertex shader from: {}", og_vertex_scr.len());
+                println!("Vertex shader source length: {}", vertex_src.len());
             }
 
             let fragment = gl::CreateShader(gl::FRAGMENT_SHADER);
@@ -323,6 +327,8 @@ impl Shader {
                 );
 
                 println!("FRAGMENT SHADER ERROR: {}", error.to_string_lossy());
+                println!("Loading fragment shader from: {}", og_fragment_src.len());
+                println!("Fragment shader source length: {}", fragment_src.len());
             }
 
             let program = gl::CreateProgram();
