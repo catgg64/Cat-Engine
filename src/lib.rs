@@ -270,15 +270,12 @@ impl Renderer {
 
         let shader = Shader::new("cube.vert", "cube.frag");
 
-        let projection = Mat4::orthographic_rh_gl(
-            0.0,
-            screen_width,
-            screen_height,
-            0.0,
-            -1.0,
-            1.0,
+        let projection = Mat4::perspective_rh_gl(
+            45.0_f32.to_radians(),
+            screen_width / screen_height,
+            0.1,
+            100.0,
         );
-
         shader.bind();
         shader.set_mat4("projection", &projection);
 
