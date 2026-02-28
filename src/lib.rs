@@ -10,6 +10,7 @@ pub mod video;
 pub mod shape;
 
 pub struct CatEngine {
+    pub _gl_context: sdl2::video::GLContext,
     event_pump: sdl2::EventPump,
     pub screen_rect: sdl2::rect::Rect,
     pub input: input::Input,
@@ -38,6 +39,7 @@ impl CatEngine{
         let fov = 300;
 
         Ok(Self {
+            _gl_context,
             event_pump,
             screen_rect,
             input,
