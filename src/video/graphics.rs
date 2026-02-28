@@ -147,7 +147,7 @@ impl Mesh {
                 renderer.draw_line(p1.turn_into_point(), p2.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
                 renderer.draw_line(p1.turn_into_point(), p3.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
                 renderer.draw_line(p2.turn_into_point(), p3.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
-                renderer.draw(&edge.3, p1.x as f32, p2.y as f32);
+                renderer.draw(&edge.3, p1.x as f32, p1.y as f32);
 
             }
         }
