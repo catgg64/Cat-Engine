@@ -61,9 +61,9 @@ impl CatEngine{
     
 
     pub fn update(&mut self) {
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        }
+        //unsafe {
+        //    gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        //}
         self.running = self.input.update(&mut self.event_pump);
         self.window.gl_swap_window();
     }
