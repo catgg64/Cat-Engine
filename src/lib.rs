@@ -63,10 +63,11 @@ impl CatEngine{
         self.fov
     }
 
-    pub fn clear_color() {
+    pub fn clear_color(&self, color: color::Color) {
         unsafe {
-            gl::ClearColor(0.1, 0.1, 0.1, 1.0); // r, g, b, alpha
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            let (r, g, b) = color.return_rgb();
+            gl::ClearColor(r as f32, g as f32, b as f32, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
     }
 }
