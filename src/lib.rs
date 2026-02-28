@@ -101,6 +101,61 @@ impl Renderer {
                 std::ptr::null(),
             );
             gl::EnableVertexAttribArray(0);
+            let mut quad_vao = 0;
+            let mut quad_vbo = 0;
+
+            unsafe {
+                // Quad vertices (2 triangles)
+                // position        // texcoord
+                let vertices: [f32; 30] = [
+                    // first triangle
+                    0.0, 0.0, 0.0,  0.0, 0.0,
+                    1.0, 0.0, 0.0,  1.0, 0.0,
+                    1.0, 1.0, 0.0,  1.0, 1.0,
+
+                    // second triangle
+                    0.0, 0.0, 0.0,  0.0, 0.0,
+                    1.0, 1.0, 0.0,  1.0, 1.0,
+                    0.0, 1.0, 0.0,  0.0, 1.0,
+                ];
+
+                gl::GenVertexArrays(1, &mut quad_vao);
+                gl::GenBuffers(1, &mut quad_vbo);
+
+                gl::BindVertexArray(quad_vao);
+                gl::BindBuffer(gl::ARRAY_BUFFER, quad_vbo);
+
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                    vertices.as_ptr() as *const _,
+                    gl::STATIC_DRAW,
+                );
+
+                let stride = 5 * std::mem::size_of::<f32>() as i32;
+
+                // position attribute (location = 0)
+                gl::VertexAttribPointer(
+                    0,
+                    3,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    stride,
+                    std::ptr::null(),
+                );
+                gl::EnableVertexAttribArray(0);
+
+                // texcoord attribute (location = 1)
+                gl::VertexAttribPointer(
+                    1,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    stride,
+                    (3 * std::mem::size_of::<f32>()) as *const _,
+                );
+                gl::EnableVertexAttribArray(1);
+            }
         }
 
         let line_shader = Shader::new("line.vert", "line.frag");
