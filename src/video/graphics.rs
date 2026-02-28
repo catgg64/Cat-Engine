@@ -337,6 +337,24 @@ impl Shader {
             gl::AttachShader(program, vertex);
             gl::AttachShader(program, fragment);
             gl::LinkProgram(program);
+            let mut success = 0;
+            gl::GetProgramiv(program, gl::LINK_STATUS, &mut success);
+
+            if success == 0 {
+                let mut len = 0;
+                gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
+
+                let error = create_whitespace_cstring_with_len(len as usize);
+
+                gl::GetProgramInfoLog(
+                    program,
+                    len,
+                    std::ptr::null_mut(),
+                    error.as_ptr() as *mut gl::types::GLchar,
+                );
+
+                println!("PROGRAM LINK ERROR: {}", error.to_string_lossy());
+            }
 
             gl::DeleteShader(vertex);
             gl::DeleteShader(fragment);
