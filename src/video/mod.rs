@@ -2,13 +2,6 @@ use crate::color::Color;
 
 pub mod graphics;
 
-pub fn clear_color() {
-    unsafe {
-        gl::ClearColor(0.1, 0.1, 0.1, 1.0); // r, g, b, alpha
-        gl::Clear(gl::COLOR_BUFFER_BIT);
-    }
-}
-
 pub mod surface {
     pub struct Surface {
         pub texture_id: u32,

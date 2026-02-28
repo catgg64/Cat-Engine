@@ -226,15 +226,21 @@ pub struct Shader {
 
 impl Shader {
     pub fn new(vertex_src: &str, fragment_src: &str) -> Self {
+        let vertex_src = std::fs::read_to_string(vertex_src).expect("Failed to read vertex shader");
+        let fragment_src = std::fs::read_to_string(fragment_src).expect("Failed to read fragment shader");
+
         unsafe {
+            let v_src = CString::new(vertex_src.as_str()).unwrap();
+            let f_src = CString::new(fragment_src.as_str()).unwrap();
+
             let vertex = gl::CreateShader(gl::VERTEX_SHADER);
-            gl::ShaderSource(vertex, 1, &(vertex_src.as_ptr() as *const _), std::ptr::null());
+            gl::ShaderSource(vertex, 1, &v_src.as_ptr(), std::ptr::null());
             gl::CompileShader(vertex);
 
             let fragment = gl::CreateShader(gl::FRAGMENT_SHADER);
-            gl::ShaderSource(fragment, 1, &(fragment_src.as_ptr() as *const _), std::ptr::null());
+            gl::ShaderSource(fragment, 1, &f_src.as_ptr(), std::ptr::null());
             gl::CompileShader(fragment);
-
+            
             let program = gl::CreateProgram();
             gl::AttachShader(program, vertex);
             gl::AttachShader(program, fragment);

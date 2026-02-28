@@ -63,6 +63,12 @@ impl CatEngine{
         self.fov
     }
 
+    pub fn clear_color() {
+        unsafe {
+            gl::ClearColor(0.1, 0.1, 0.1, 1.0); // r, g, b, alpha
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+    }
 }
 
 pub struct Renderer {
@@ -105,6 +111,7 @@ impl Renderer {
             let mut quad_vbo = 0;
 
             unsafe {
+                gl::Enable(gl::DEPTH_TEST);
                 // Quad vertices (2 triangles)
                 // position        // texcoord
                 let vertices: [f32; 30] = [
