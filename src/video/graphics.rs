@@ -10,7 +10,16 @@ use glam::Vec3;
 use std::sync::Arc;
 use std::ffi::CString;
 use std::ptr;
+use std::iter;
 
+fn create_whitespace_cstring_with_len(len: usize) -> CString {
+    // allocate buffer of correct size
+    let buffer: Vec<u8> = iter::repeat(b' ')
+        .take(len)
+        .collect();
+
+    unsafe { CString::from_vec_unchecked(buffer) }
+}
 
 pub fn rotate(
     origin: (f64, f64),
@@ -278,12 +287,44 @@ impl Shader {
 
             let vertex = gl::CreateShader(gl::VERTEX_SHADER);
             gl::ShaderSource(vertex, 1, &v_src.as_ptr(), std::ptr::null());
-            gl::CompileShader(vertex);
+            let mut success = 0;
+            gl::GetShaderiv(vertex, gl::COMPILE_STATUS, &mut success);
+
+            if success == 0 {
+                let mut len = 0;
+                gl::GetShaderiv(vertex, gl::INFO_LOG_LENGTH, &mut len);
+
+                let error = create_whitespace_cstring_with_len(len as usize);
+                gl::GetShaderInfoLog(
+                    vertex,
+                    len,
+                    std::ptr::null_mut(),
+                    error.as_ptr() as *mut gl::types::GLchar,
+                );
+
+                println!("VERTEX SHADER ERROR: {}", error.to_string_lossy());
+            }
 
             let fragment = gl::CreateShader(gl::FRAGMENT_SHADER);
             gl::ShaderSource(fragment, 1, &f_src.as_ptr(), std::ptr::null());
-            gl::CompileShader(fragment);
-            
+            let mut success = 0;
+            gl::GetShaderiv(fragment, gl::COMPILE_STATUS, &mut success);
+
+            if success == 0 {
+                let mut len = 0;
+                gl::GetShaderiv(fragment, gl::INFO_LOG_LENGTH, &mut len);
+
+                let error = create_whitespace_cstring_with_len(len as usize);
+                gl::GetShaderInfoLog(
+                    fragment,
+                    len,
+                    std::ptr::null_mut(),
+                    error.as_ptr() as *mut gl::types::GLchar,
+                );
+
+                println!("FRAGMENT SHADER ERROR: {}", error.to_string_lossy());
+            }
+
             let program = gl::CreateProgram();
             gl::AttachShader(program, vertex);
             gl::AttachShader(program, fragment);
