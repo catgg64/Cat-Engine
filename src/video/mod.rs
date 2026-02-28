@@ -2,10 +2,57 @@ use crate::color::Color;
 
 pub mod graphics;
 
-pub fn clear_color(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color: Color, screen_rect: sdl2::rect::Rect) {
-    let (r, g, b) = color.return_rgb();
-    canvas.set_draw_color(sdl2::pixels::Color::RGB(r, g, b));
-    canvas.fill_rect(screen_rect).expect("error clearing screen:");
+pub fn clear_color() {
+    unsafe {
+        gl::ClearColor(0.1, 0.1, 0.1, 1.0); // r, g, b, alpha
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+    }
+}
+
+pub mod surface {
+    pub struct Surface {
+        pub texture_id: u32,
+        pub width: u32,
+        pub height: u32,
+    }
+
+    impl Surface {
+        pub fn new(path: &str) -> Self {
+            let img = image::open(path).expect("Failed to load image");
+            let img = img.flipv().into_rgba8();
+            let (width, height) = img.dimensions();
+            let data = img.into_raw();
+
+            let mut texture_id = 0;
+
+            unsafe {
+                gl::GenTextures(1, &mut texture_id);
+                gl::BindTexture(gl::TEXTURE_2D, texture_id);
+
+                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+                gl::TexImage2D(
+                    gl::TEXTURE_2D,
+                    0,
+                    gl::RGBA as i32,
+                    width as i32,
+                    height as i32,
+                    0,
+                    gl::RGBA,
+                    gl::UNSIGNED_BYTE,
+                    data.as_ptr() as *const _
+                );
+            }
+
+            Surface {
+                texture_id,
+                width,
+                height,
+            }
+        }
+    }
+
 }
 
 pub mod image {
@@ -15,53 +62,17 @@ pub mod image {
     use crate::shape::rect::Rect;
     use sdl2::pixels::PixelFormatEnum;
 
-
-    pub fn load<'a>(texture_creator: &'a TextureCreator<WindowContext>, texture: String) -> Result<render::Texture<'a>, String>{
-        
-        let img = image::open(texture)
-            .expect("Failed to load image");
-
-        let img = img.to_rgba8();
-        let (width, height) = img.dimensions();
-        let pixels = img.into_raw();
-        let mut texture = texture_creator
-            .create_texture_streaming(
-                PixelFormatEnum::RGBA32,
-                width,
-                height,
-            )
-            .map_err(|e| e.to_string())?;
-            
-
-            texture
-                .update(None, &pixels, (4 * width) as usize)
-                .map_err(|e| e.to_string())?;
-            Ok(texture)
-        }
-        
-    pub fn blit(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture: &render::Texture, region: Rect) -> Result<(), String>{
-        let region_grabbed = region.get_x_y_sizex_sizey();
-        let actual_rect = sdl2::rect::Rect::new(region_grabbed.0 as i32, region_grabbed.1 as i32, region_grabbed.2 as u32, region_grabbed.3 as u32);
-        canvas.copy(texture, None, actual_rect)
-    }
-
-    //pub fn stretch_blit<'a>(canvas: Canvas<sdl2::render::Canvas<sdl2::video::Window>, texture: &'a render::Texture, x: i32, y: i32, xx: i32, xy: i32) -> &'a render::Texture<'a> {
-    //    let (width, height) = (texture.query().width, texture.query().height);
-    //    for x in width {
-    //        scr = sdl2::rect::Rect::new(x, height, 1, height)
-    //    }
-    //    
-    //}
-
-    pub mod draw {
-        use crate::shape;
-        use crate::color;
-
-        pub fn line(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, color: color::Color, point_1: shape::point::Point, point_2: shape::point::Point) -> Result<(), String> {
-            canvas.set_draw_color(color.turn_into_sdlcolor());
-            canvas.draw_line(point_1.turn_into_sdl_point(), point_2.turn_into_sdl_point())
-        }
-    }
+    //pub mod draw {
+    //    use sdl2::surface::Surface;
+//
+//        use crate::shape;
+//        use crate::color;
+//
+//        pub fn line(surface: &mut Surface, color: color::Color, point_1: shape::point::Point, point_2: shape::point::Point) -> Result<(), String> {
+//            surface.set_draw_color(color.turn_into_sdlcolor());
+//            surface.draw_line(point_1.turn_into_sdl_point(), point_2.turn_into_sdl_point())
+//        }
+//    }
 
 }
 

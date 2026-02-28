@@ -1,9 +1,12 @@
 use sdl2::render::Canvas;
 
+use crate::Renderer;
 use crate::color::Color;
 use crate::shape::point::{self, Point};
-use crate::video::image::draw;
 use std::f64::consts::PI;
+use std::ffi::CString;
+use std::fs::ReadDir;
+use glam::Vec3;
 
 pub fn rotate(
     origin: (f64, f64),
@@ -118,7 +121,7 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, canvas: &mut Canvas<sdl2::video::Window>, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
+    pub fn draw(&self, renderer: Renderer, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
         for edge in &self.edges {
             let a = self.vertices[edge.0]
                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
@@ -127,7 +130,8 @@ impl Mesh {
                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
 
             if let (Ok(p1), Ok(p2)) = (a, b) {
-                draw::line(canvas, color, p1.turn_into_point(), p2.turn_into_point());
+                let (r, g, b) = color.return_rgb();
+                renderer.draw_line(p1.turn_into_point(), p2.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
             }
         }
     }
@@ -179,16 +183,15 @@ impl Cube {
         Self { position, width, height }
     }
 
-    pub fn draw(&self, mut canvas: &mut Canvas<sdl2::video::Window>, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
+    pub fn draw(&self, mut renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
         let mut try_draw = |a: &Result<Coordinate, String>, 
                 b: &Result<Coordinate, String>| {
     
     if let (Ok(p1), Ok(p2)) = (a, b) {
-        let _ = draw::line(
-            &mut canvas,
-            crate::color::Color::new(255, 255, 255),
+        let _ = renderer.draw_line(
             p1.turn_into_point(),
             p2.turn_into_point(),
+            Vec3 { x: 1.0, y: 1.0, z: 1.0 }
         );
     }
     };
@@ -215,4 +218,56 @@ impl Cube {
         try_draw( &top_left_bottom_point, &bottom_left_bottom_point);
         try_draw( &top_right_bottom_point, &bottom_right_bottom_point);
         }
+}
+
+pub struct Shader {
+    program_id: u32,
+}
+
+impl Shader {
+    pub fn new(vertex_src: &str, fragment_src: &str) -> Self {
+        unsafe {
+            let vertex = gl::CreateShader(gl::VERTEX_SHADER);
+            gl::ShaderSource(vertex, 1, &(vertex_src.as_ptr() as *const _), std::ptr::null());
+            gl::CompileShader(vertex);
+
+            let fragment = gl::CreateShader(gl::FRAGMENT_SHADER);
+            gl::ShaderSource(fragment, 1, &(fragment_src.as_ptr() as *const _), std::ptr::null());
+            gl::CompileShader(fragment);
+
+            let program = gl::CreateProgram();
+            gl::AttachShader(program, vertex);
+            gl::AttachShader(program, fragment);
+            gl::LinkProgram(program);
+
+            gl::DeleteShader(vertex);
+            gl::DeleteShader(fragment);
+
+            Shader { program_id: program }
+        }
+    }
+    pub fn bind(&self) {
+            unsafe {
+                gl::UseProgram(self.program_id);
+            }
+        }
+    
+    pub fn set_mat4(&self, name: &str, mat: &glam::Mat4) {
+        unsafe {
+            let location = gl::GetUniformLocation(
+                self.program_id,
+                std::ffi::CString::new(name).unwrap().as_ptr()
+            );
+            gl::UniformMatrix4fv(location, 1, gl::FALSE, mat.to_cols_array().as_ptr());
+        }
+    }
+
+    pub fn set_vec3(&self, name: &str, value: glam::Vec3) {
+        let cname = CString::new(name).expect("Uniform name had null byte");
+
+        unsafe {
+            let location = gl::GetUniformLocation(self.program_id, cname.as_ptr());
+            gl::Uniform3f(location, value.x, value.y, value.z);
+        }
+    }
 }

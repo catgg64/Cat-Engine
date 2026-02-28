@@ -1,18 +1,20 @@
-use sdl2::{ render::TextureCreator, video::WindowContext, *};
+use sdl2::{ render::TextureCreator, video::Window, video::WindowContext, *};
 use input::*;
 use sdl2::video::GLProfile;
+use video::surface::Surface;
+use video::graphics::Shader;
+use glam::{ Mat4, Vec3 };
 pub mod color;
 pub mod input;
 pub mod video;
 pub mod shape;
 
 pub struct CatEngine {
-    pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
     pub screen_rect: sdl2::rect::Rect,
     pub input: input::Input,
     pub running: bool,
-    pub texture_creator: TextureCreator<WindowContext>,
+    pub window: Window,
     fov: i16,
 }
 
@@ -26,25 +28,18 @@ impl CatEngine{
             .opengl()
             .build()
             .map_err(|e| e.to_string())?;let event_pump: EventPump = context.event_pump()?;
-        let canvas = window
-            .into_canvas()
-            .accelerated()
-            .build()
-            .map_err(|e| e.to_string())?;
-
+        let _gl_context = window.gl_create_context()?;
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
         let mut running: bool = true;
-        let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
         let fov = 300;
 
         Ok(Self {
-            canvas, 
             event_pump,
             screen_rect,
             input,
             running,
-            texture_creator,
+            window,
             fov,
         })
     }
@@ -53,7 +48,7 @@ impl CatEngine{
 
     pub fn update(&mut self) {
         self.running = self.input.update(&mut self.event_pump);
-        self.canvas.present();
+        self.window.gl_swap_window();
     }
 
     pub fn set_fov(&mut self, fov: i16) {
@@ -66,6 +61,117 @@ impl CatEngine{
 
 }
 
+pub struct Renderer {
+    quad_vao: u32,
+    shader: Shader,
+    projection: Mat4,
+    line_vao: u32,
+    line_vbo: u32,
+    line_shader: Shader,
+}
+impl Renderer {
+    pub fn new(screen_width: f32, screen_height: f32) -> Self {
+        let mut line_vao = 0;
+        let mut line_vbo = 0;
+
+        unsafe {
+            gl::GenVertexArrays(1, &mut line_vao);
+            gl::GenBuffers(1, &mut line_vbo);
+
+            gl::BindVertexArray(line_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, line_vbo);
+
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (6 * std::mem::size_of::<f32>()) as isize,
+                std::ptr::null(),
+                gl::DYNAMIC_DRAW,
+            );
+
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                3 * std::mem::size_of::<f32>() as i32,
+                std::ptr::null(),
+            );
+            gl::EnableVertexAttribArray(0);
+        }
+
+        let line_shader = Shader::new("line.vert", "line.frag");
+
+        let shader = Shader::new("quad.vert", "quad.frag");
+
+        let projection = Mat4::orthographic_rh_gl(
+            0.0,
+            screen_width,
+            screen_height,
+            0.0,
+            -1.0,
+            1.0,
+        );
+
+        shader.bind();
+        shader.set_mat4("projection", &projection);
+
+        line_shader.bind();
+        line_shader.set_mat4("projection", &projection);
+
+        Renderer {
+            quad_vao: 0, // <-- you must initialize this properly later
+            shader,
+            projection,
+            line_vao,
+            line_vbo,
+            line_shader,
+        }
+    }
+    
+
+    pub fn draw(&self, surface: &Surface, x: f32, y: f32) {
+        unsafe {
+            self.shader.bind();
+
+            gl::BindTexture(gl::TEXTURE_2D, surface.texture_id);
+
+            let model = Mat4::from_translation(Vec3::new(x, y, 0.0))
+                * Mat4::from_scale(Vec3::new(surface.width as f32, surface.height as f32, 1.0));
+
+            self.shader.set_mat4("model", &model);
+
+            gl::BindVertexArray(self.quad_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+        }
+    }
+    pub fn draw_line(
+        &self,
+        start: crate::shape::point::Point,
+        end: crate::shape::point::Point,
+        color: Vec3,
+    ) {
+        let vertices = [
+            start.x as f32, start.y as f32, 0.0,
+            end.x as f32,   end.y as f32,   0.0,
+        ];
+
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.line_vbo);
+            gl::BufferSubData(
+                gl::ARRAY_BUFFER,
+                0,
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr() as *const _,
+            );
+
+            self.line_shader.bind();
+            self.line_shader.set_vec3("color", color);
+
+            gl::BindVertexArray(self.line_vao);
+            gl::DrawArrays(gl::LINES, 0, 2);
+        }
+    }
+}
 pub mod keyboard {
     pub use sdl2::keyboard::{Keycode, Scancode, Mod};
     // You can add your own helpers here later if you want
