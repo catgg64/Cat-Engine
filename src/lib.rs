@@ -37,6 +37,9 @@ impl CatEngine{
         let mut running: bool = true;
         let mut renderer = Renderer::new(width as f32, height as f32);
         let fov = 300;
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+        }
 
         Ok(Self {
             _gl_context,
