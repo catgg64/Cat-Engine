@@ -268,7 +268,7 @@ impl Renderer {
         
         let line_shader = Shader::new("line.vert", "line.frag");
 
-        let shader = Shader::new("quad.vert", "quad.frag");
+        let shader = Shader::new("cube.vert", "cube.frag");
 
         let projection = Mat4::orthographic_rh_gl(
             0.0,
