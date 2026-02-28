@@ -220,7 +220,7 @@ pub struct Cube {
 
 impl Cube {
     pub fn new(position: ThirdDimensionCoordinate, width: i64, height: i64) -> Self {
-        let texture_surface: Surface = Surface::new("me.png");
+        let texture_surface: Surface = Surface::new("mel.png");
         Self { position, width, height, texture_surface }
     }
 
