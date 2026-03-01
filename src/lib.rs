@@ -372,40 +372,68 @@ impl Renderer {
             gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
-    pub fn load_texture(&mut self, path: &str) -> usize {
-        unsafe {
-            let mut texture_id = 0;
-            gl::GenTextures(1, &mut texture_id);
-            gl::BindTexture(gl::TEXTURE_2D, texture_id);
+    pub fn draw_textured_quad(
+        &mut self,
+        verts: &[Vec3; 4],
+        texture_index: usize,
+        camera_matrix: [[f32; 4]; 4],
+    ) {
+        let mut screen_coords = [Vec3::ZERO; 4];
 
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        for i in 0..4 {
+            let v = verts[i];
+            // Convert Vec3 to Vec4 (x, y, z, 1.0)
+            let vec4 = [v.x, v.y, v.z, 1.0];
 
-            let img = image::open(path).expect("Failed to load texture");
-            let img = img.flipv().into_rgba8();
-            let (width, height) = img.dimensions();
-            let data = img.into_raw();
+            // Matrix multiply (4x4 * 4x1)
+            let mut result = [0.0; 4];
+            for row in 0..4 {
+                result[row] =
+                    camera_matrix[row][0] * vec4[0] +
+                    camera_matrix[row][1] * vec4[1] +
+                    camera_matrix[row][2] * vec4[2] +
+                    camera_matrix[row][3] * vec4[3];
+            }
 
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGBA as i32,
-                width as i32,
-                height as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                data.as_ptr() as *const _,
-            );
-
-            gl::GenerateMipmap(gl::TEXTURE_2D);
-
-            self.textures.push(texture_id);
-            self.textures.len() - 1
+            // Perspective divide
+            let w = result[3];
+            screen_coords[i] = Vec3 {
+                x: result[0] / w,
+                y: result[1] / w,
+                z: result[2] / w,
+            };
         }
-}
+
+        // UVs for the quad
+        let uv = [
+            (0.0, 0.0),
+            (1.0, 0.0),
+            (1.0, 1.0),
+            (0.0, 1.0),
+        ];
+
+        // Draw two triangles (quad)
+        self.draw_triangle(screen_coords[0], screen_coords[1], screen_coords[2], uv[0], uv[1], uv[2], texture_index);
+        self.draw_triangle(screen_coords[0], screen_coords[2], screen_coords[3], uv[0], uv[2], uv[3], texture_index);
+    }
+
+    // You’d still need a working draw_triangle, for example:
+    pub fn draw_triangle(
+        &mut self,
+        v0: Vec3,
+        v1: Vec3,
+        v2: Vec3,
+        uv0: (f32, f32),
+        uv1: (f32, f32),
+        uv2: (f32, f32),
+        texture_index: usize,
+    ) {
+        // For now, simplest thing: just draw edges as lines
+        self.draw_line(shape::point::Point { x: v0.x as f64, y: v0.y as f64 }, shape::point::Point { x: v1.x as f64, y: v1.y as f64 }, Vec3::new(1.0,1.0,1.0));
+        self.draw_line(shape::point::Point { x: v1.x as f64, y: v1.y as f64 }, shape::point::Point { x: v2.x as f64, y: v2.y as f64 }, Vec3::new(1.0,1.0,1.0));
+        self.draw_line(shape::point::Point { x: v2.x as f64, y: v2.y as f64 }, shape::point::Point { x: v0.x as f64, y: v0.y as f64 }, Vec3::new(1.0,1.0,1.0));
+        // Later, you can fill and sample the texture properly
+    }
 }
 pub mod keyboard {
     pub use sdl2::keyboard::{Keycode, Scancode, Mod};

@@ -1,6 +1,6 @@
 use sdl2::render::Canvas;
 
-use crate::Renderer;
+use crate::{CatEngine, Renderer};
 use crate::color::Color;
 use crate::shape::point::{self, Point};
 use crate::video::surface::Surface;
@@ -234,41 +234,62 @@ impl Cube {
         Cube{ position, width: width as i64, height: height as i64, texture_index }
     }
 
-    pub fn draw(&self, mut renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
-        let mut try_draw = |a: &Result<Coordinate, String>, 
-                b: &Result<Coordinate, String>| {
-    
-    if let (Ok(p1), Ok(p2)) = (a, b) {
-        let _ = renderer.draw_line(
-            p1.turn_into_point(),
-            p2.turn_into_point(),
-            Vec3 { x: 1.0, y: 1.0, z: 1.0 }
-        );
-    }
-    };
-        let origin_point = self.position.turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let top_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width as f64, self.position.y, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let top_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y, self.position.z - self.width as f64).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let top_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width as f64, self.position.y, self.position.z - self.width as f64).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let bottom_left_up_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height as f64, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let bottom_right_up_point = ThirdDimensionCoordinate::new(self.position.x + self.width as f64, self.position.y - self.height as f64, self.position.z).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let bottom_left_bottom_point = ThirdDimensionCoordinate::new(self.position.x, self.position.y - self.height as f64, self.position.z - self.width as f64).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        let bottom_right_bottom_point = ThirdDimensionCoordinate::new(self.position.x + self.width as f64, self.position.y - self.height as f64, self.position.z - self.width as f64).turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
-        
+    pub fn draw(&self, renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, yaw: i64, pitch: i64, cat_engine: CatEngine) {
+        // Precompute cube vertices in world space
+        let verts = [
+            Vec3 { x: self.position.x as f32,               y: self.position.y as f32,                z: self.position.z as f32 },                // top-left-front
+            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32,                z: self.position.z as f32 },                // top-right-front
+            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 }, // bottom-right-front
+            Vec3 { x: self.position.x as f32,               y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 }, // bottom-left-front
+            // Back face
+            Vec3 { x: self.position.x as f32,               y: self.position.y as f32,                z: self.position.z as f32 - self.width as f32 },
+            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32,                z: self.position.z as f32 - self.width as f32 },
+            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 - self.width as f32 },
+            Vec3 { x: self.position.x as f32,               y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 - self.width as f32 },
+        ];
 
-        try_draw( &origin_point, &top_right_up_point);
-        try_draw( &origin_point, &top_left_bottom_point);
-        try_draw( &top_right_bottom_point, &top_left_bottom_point);
-        try_draw( &top_right_bottom_point, &top_right_up_point);
-        try_draw( &bottom_left_up_point, &bottom_right_up_point);
-        try_draw( &bottom_left_up_point, &bottom_left_bottom_point);
-        try_draw( &bottom_right_bottom_point, &bottom_left_bottom_point);
-        try_draw( &bottom_right_bottom_point, &bottom_right_up_point);
-        try_draw( &origin_point, &bottom_left_up_point);
-        try_draw( &top_right_up_point, &bottom_right_up_point);
-        try_draw( &top_left_bottom_point, &bottom_left_bottom_point);
-        try_draw( &top_right_bottom_point, &bottom_right_bottom_point);
+        // Move vertices into camera space
+        let verts_cam: Vec<Vec3> = verts.iter()
+            .map(|v| Vec3 {
+                x: v.x - camera_x as f32,
+                y: v.y - camera_y as f32,
+                z: v.z - camera_z as f32,
+            })
+            .collect();
+
+        // Each face as a quad (4 indices)
+        let faces = [
+            [0, 1, 2, 3], // front
+            [4, 5, 6, 7], // back
+            [0, 3, 7, 4], // left
+            [1, 5, 6, 2], // right
+            [0, 1, 5, 4], // top
+            [3, 2, 6, 7], // bottom
+        ];
+
+        let uv = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)];
+
+        for face in faces {
+            use glam::Vec3;
+
+            let top_face = [
+                Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32),
+                Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32),
+                Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
+                Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
+            ];
+            let (_, _, view_matrix) = cat_engine.get_camera_specs(
+                camera_x as f32,
+                camera_y as f32,
+                camera_z as f32,
+                yaw as f32,
+                pitch as f32,
+            );
+
+            let view_matrix_array: [[f32; 4]; 4] = view_matrix.to_cols_array_2d();
+            renderer.draw_textured_quad(&top_face, self.texture_index, view_matrix_array);
         }
+    }
 }
 
 pub struct Shader {
