@@ -335,7 +335,7 @@ impl Cube {
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture_index as u32);
+            gl::BindTexture(gl::TEXTURE_2D, renderer.textures[self.texture_index]);
             renderer.shader.set_int("tex", 0);
 
             gl::BindVertexArray(self.vao);
