@@ -266,16 +266,22 @@ impl Cube {
 
         let view_matrix_array: [[f32; 4]; 4] = view_matrix.to_cols_array_2d();
 
-        let uv = [(0.0,0.0),(1.0,0.0),(1.0,1.0),(0.0,1.0)];
-
         for face in faces {
-            let quad = [
-                verts_cam[face[0]],
-                verts_cam[face[1]],
-                verts_cam[face[2]],
-                verts_cam[face[3]],
+            // Get the 4 vertices for the face
+            let quad_world = [
+                verts[face[0]],
+                verts[face[1]],
+                verts[face[2]],
+                verts[face[3]],
             ];
-            renderer.draw_textured_quad(&quad, self.texture_index, view_matrix_array);
+
+            // Transform each vertex by the view matrix
+            let quad_cam: [Vec3; 4] = quad_world.map(|v| {
+                let v4 = view_matrix * v.extend(1.0); // Mat4 * Vec4
+                Vec3::new(v4.x, v4.y, v4.z)
+            });
+
+            renderer.draw_textured_quad(&quad_cam, self.texture_index, view_matrix_array);
         }
     }
 }
