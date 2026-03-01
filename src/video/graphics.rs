@@ -291,6 +291,10 @@ impl Cube {
             Vertex { pos: [0.0, 0.0, -1.0], tex: [0.0, 0.0] },
         ];
 
+        let model =
+            Mat4::from_translation(position) *
+            Mat4::from_scale(Vec3::new(width, height, depth));
+
         let indices: [u32; 36] = [
             0, 1, 2, 2, 3, 0, // front
             5, 4, 7, 7, 6, 5, // back
