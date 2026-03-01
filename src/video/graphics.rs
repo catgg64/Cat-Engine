@@ -358,11 +358,14 @@ impl Cube {
     }
 
     pub fn draw(&self, renderer: &Renderer, view: Mat4, projection: Mat4) {
-        let model = Mat4::from_translation(self.position);
+        let model =
+            Mat4::from_translation(self.position) *
+            Mat4::from_scale(Vec3::new(self.width, self.height, self.depth));
+
+        renderer.shader.bind();
         renderer.shader.set_mat4("model", &model);
         renderer.shader.set_mat4("view", &view);
         renderer.shader.set_mat4("projection", &projection);
-        renderer.shader.bind();
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
