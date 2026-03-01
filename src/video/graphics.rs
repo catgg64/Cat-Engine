@@ -234,31 +234,21 @@ impl Cube {
         Cube{ position, width: width as i64, height: height as i64, texture_index }
     }
 
-    pub fn draw(&self, renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, yaw: i64, pitch: i64, cat_engine: CatEngine) {
-        // Precompute cube vertices in world space
+    pub fn draw(&self, renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, yaw: f32, pitch: f32, cat_engine: &CatEngine) {
+        // Compute cube vertices in world space
         let verts = [
-            Vec3 { x: self.position.x as f32,               y: self.position.y as f32,                z: self.position.z as f32 },                // top-left-front
-            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32,                z: self.position.z as f32 },                // top-right-front
-            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 }, // bottom-right-front
-            Vec3 { x: self.position.x as f32,               y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 }, // bottom-left-front
-            // Back face
-            Vec3 { x: self.position.x as f32,               y: self.position.y as f32,                z: self.position.z as f32 - self.width as f32 },
-            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32,                z: self.position.z as f32 - self.width as f32 },
-            Vec3 { x: self.position.x as f32 + self.width as f32, y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 - self.width as f32 },
-            Vec3 { x: self.position.x as f32,               y: self.position.y as f32 - self.height as f32, z: self.position.z as f32 - self.width as f32 },
+            Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32),                        // top-left-front
+            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32),    // top-right-front
+            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32 - self.height as f32, self.position.z as f32), // bottom-right-front
+            Vec3::new(self.position.x as f32, self.position.y as f32 - self.height as f32, self.position.z as f32),   // bottom-left-front
+
+            Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),     // top-left-back
+            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32 - self.width as f32), // top-right-back
+            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32 - self.height as f32, self.position.z as f32 - self.width as f32), // bottom-right-back
+            Vec3::new(self.position.x as f32, self.position.y as f32 - self.height as f32, self.position.z as f32 - self.width as f32), // bottom-left-back
         ];
 
-        // Move vertices into camera space
-        let verts_cam: Vec<Vec3> = verts.iter()
-            .map(|v| Vec3 {
-                x: v.x - camera_x as f32,
-                y: v.y - camera_y as f32,
-                z: v.z - camera_z as f32,
-            })
-            .collect();
-
-        // Each face as a quad (4 indices)
-        let faces = [
+        let faces: [[usize; 4]; 6] = [
             [0, 1, 2, 3], // front
             [4, 5, 6, 7], // back
             [0, 3, 7, 4], // left
@@ -267,27 +257,22 @@ impl Cube {
             [3, 2, 6, 7], // bottom
         ];
 
-        let uv = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)];
+        let view_matrix_array: [[f32; 4]; 4] = cat_engine.get_camera_specs(
+            camera_x as f32,
+            camera_y as f32,
+            camera_z as f32,
+            yaw,
+            pitch,
+        ).2.to_cols_array_2d();
 
         for face in faces {
-            use glam::Vec3;
-
-            let top_face = [
-                Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32),
-                Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32),
-                Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
-                Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
+            let quad = [
+                verts[face[0]],
+                verts[face[1]],
+                verts[face[2]],
+                verts[face[3]],
             ];
-            let (_, _, view_matrix) = cat_engine.get_camera_specs(
-                camera_x as f32,
-                camera_y as f32,
-                camera_z as f32,
-                yaw as f32,
-                pitch as f32,
-            );
-
-            let view_matrix_array: [[f32; 4]; 4] = view_matrix.to_cols_array_2d();
-            renderer.draw_textured_quad(&top_face, self.texture_index, view_matrix_array);
+            renderer.draw_textured_quad(&quad, self.texture_index, view_matrix_array);
         }
     }
 }
