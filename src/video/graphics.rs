@@ -164,75 +164,74 @@ impl Mesh {
         }
     }
 
-    pub fn append_cube(&mut self, cube: &Cube) {
-        let base_index = self.vertices.len();
+//     pub fn append_cube(&mut self, cube: &Cube) {
+//         let base_index = self.vertices.len();
 
-        // Create all 8 cube corners
-        let top_front_left     = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z);
-        let top_front_right    = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y, cube.position.z);
-        let top_back_left      = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z - cube.width as f64);
-        let top_back_right     = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y, cube.position.z - cube.width as f64);
-        let bottom_front_left  = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height as f64, cube.position.z);
-        let bottom_front_right = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y - cube.height as f64, cube.position.z);
-        let bottom_back_left   = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height as f64, cube.position.z - cube.width as f64);
-        let bottom_back_right  = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y - cube.height as f64, cube.position.z - cube.width as f64);
+//         // Create all 8 cube corners
+//         let top_front_left     = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z);
+//         let top_front_right    = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y, cube.position.z);
+//         let top_back_left      = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y, cube.position.z - cube.width as f64);
+//         let top_back_right     = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y, cube.position.z - cube.width as f64);
+//         let bottom_front_left  = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height as f64, cube.position.z);
+//         let bottom_front_right = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y - cube.height as f64, cube.position.z);
+//         let bottom_back_left   = ThirdDimensionCoordinate::new(cube.position.x, cube.position.y - cube.height as f64, cube.position.z - cube.width as f64);
+//         let bottom_back_right  = ThirdDimensionCoordinate::new(cube.position.x + cube.width as f64, cube.position.y - cube.height as f64, cube.position.z - cube.width as f64);
 
-        // Push vertices
-        self.vertices.push(top_front_left);     // 0
-        self.vertices.push(top_front_right);    // 1
-        self.vertices.push(top_back_left);      // 2
-        self.vertices.push(top_back_right);     // 3
-        self.vertices.push(bottom_front_left);  // 4
-        self.vertices.push(bottom_front_right); // 5
-        self.vertices.push(bottom_back_left);   // 6
-        self.vertices.push(bottom_back_right);  // 7
+//         // Push vertices
+//         self.vertices.push(top_front_left);     // 0
+//         self.vertices.push(top_front_right);    // 1
+//         self.vertices.push(top_back_left);      // 2
+//         self.vertices.push(top_back_right);     // 3
+//         self.vertices.push(bottom_front_left);  // 4
+//         self.vertices.push(bottom_front_right); // 5
+//         self.vertices.push(bottom_back_left);   // 6
+//         self.vertices.push(bottom_back_right);  // 7
 
-        // Add **faces as triangles** (each face = 2 triangles)
-        // Top face
-        self.edges.push((base_index+0, base_index+1, base_index+2, cube.texture_surface.clone()));
-        self.edges.push((base_index+1, base_index+3, base_index+2, cube.texture_surface.clone()));
+//         // Add **faces as triangles** (each face = 2 triangles)
+//         // Top face
+//         self.edges.push((base_index+0, base_index+1, base_index+2, cube.texture_surface.clone()));
+//         self.edges.push((base_index+1, base_index+3, base_index+2, cube.texture_surface.clone()));
 
-        // Bottom face
-        self.edges.push((base_index+4, base_index+6, base_index+5, cube.texture_surface.clone()));
-        self.edges.push((base_index+5, base_index+6, base_index+7, cube.texture_surface.clone()));
+//         // Bottom face
+//         self.edges.push((base_index+4, base_index+6, base_index+5, cube.texture_surface.clone()));
+//         self.edges.push((base_index+5, base_index+6, base_index+7, cube.texture_surface.clone()));
 
-        // Front face
-        self.edges.push((base_index+0, base_index+4, base_index+1, cube.texture_surface.clone()));
-        self.edges.push((base_index+1, base_index+4, base_index+5, cube.texture_surface.clone()));
+//         // Front face
+//         self.edges.push((base_index+0, base_index+4, base_index+1, cube.texture_surface.clone()));
+//         self.edges.push((base_index+1, base_index+4, base_index+5, cube.texture_surface.clone()));
 
-        // Back face
-        self.edges.push((base_index+2, base_index+3, base_index+6, cube.texture_surface.clone()));
-        self.edges.push((base_index+3, base_index+7, base_index+6, cube.texture_surface.clone()));
+//         // Back face
+//         self.edges.push((base_index+2, base_index+3, base_index+6, cube.texture_surface.clone()));
+//         self.edges.push((base_index+3, base_index+7, base_index+6, cube.texture_surface.clone()));
 
-        // Left face
-        self.edges.push((base_index+0, base_index+2, base_index+4, cube.texture_surface.clone()));
-        self.edges.push((base_index+2, base_index+6, base_index+4, cube.texture_surface.clone()));
+//         // Left face
+//         self.edges.push((base_index+0, base_index+2, base_index+4, cube.texture_surface.clone()));
+//         self.edges.push((base_index+2, base_index+6, base_index+4, cube.texture_surface.clone()));
 
-        // Right face
-        self.edges.push((base_index+1, base_index+5, base_index+3, cube.texture_surface.clone()));
-        self.edges.push((base_index+3, base_index+5, base_index+7, cube.texture_surface.clone()));
-        // 0 = origin_point
-        // 1 = top_right_up_point
-        // 2 = top_left_bottom_point
-        // 3 = top_right_bottom_point
-        // 4 = bottom_left_up_point
-        // 5 = bottom_right_up_point
-        // 6 = bottom_left_bottom_point
-        // 7 = bottom_right_bottom_point
-    }
+//         // Right face
+//         self.edges.push((base_index+1, base_index+5, base_index+3, cube.texture_surface.clone()));
+//         self.edges.push((base_index+3, base_index+5, base_index+7, cube.texture_surface.clone()));
+//         // 0 = origin_point
+//         // 1 = top_right_up_point
+//         // 2 = top_left_bottom_point
+//         // 3 = top_right_bottom_point
+//         // 4 = bottom_left_up_point
+//         // 5 = bottom_right_up_point
+//         // 6 = bottom_left_bottom_point
+//         // 7 = bottom_right_bottom_point
+//     }
 }
 
 pub struct Cube {
     position: ThirdDimensionCoordinate,
     width: i64,
     height: i64,
-    texture_surface: Surface,
+    pub texture_index: usize,
 }
 
 impl Cube {
-    pub fn new(position: ThirdDimensionCoordinate, width: i64, height: i64) -> Self {
-        let texture_surface: Surface = Surface::new("mel.png");
-        Self { position, width, height, texture_surface }
+    pub fn new(position: ThirdDimensionCoordinate, width: i32, height: i32, texture_index: usize) -> Self {
+        Cube{ position, width: width as i64, height: height as i64, texture_index }
     }
 
     pub fn draw(&self, mut renderer: &mut Renderer, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {

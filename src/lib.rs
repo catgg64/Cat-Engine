@@ -112,7 +112,7 @@ pub struct Renderer {
     line_shader: Shader,
     cube_vao: u32,
     cube_vbo: u32,
-    cube_texture: Surface,
+    textures: Vec<u32>,
 }
 impl Renderer {
     pub fn new(screen_width: f32, screen_height: f32) -> Self {
@@ -285,8 +285,6 @@ impl Renderer {
         line_shader.bind();
         line_shader.set_mat4("projection", &projection);
 
-        let cube_texture = surface::Surface::new("mel.png");
-
         Renderer {
             quad_vao, // <-- you must initialize this properly later
             shader,
@@ -296,7 +294,7 @@ impl Renderer {
             line_shader,
             cube_vao,
             cube_vbo,
-            cube_texture,
+            textures: Vec::new(),
         }
     }
     
@@ -353,16 +351,15 @@ impl Renderer {
         }
     }
 
-    pub fn draw_cube(&self, view: Mat4, position: glam::Vec3) {
-
-        self.shader.use_program();
+    pub fn draw_cube(&self, view: Mat4, position: Vec3, texture_index: usize) {
+        self.shader.bind();
 
         self.shader.set_mat4("projection", &self.projection);
         self.shader.set_mat4("view", &view);
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, self.cube_texture.texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, self.textures[texture_index]);
         }
 
         self.shader.set_int("tex", 0);
@@ -375,6 +372,40 @@ impl Renderer {
             gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
+    pub fn load_texture(&mut self, path: &str) -> usize {
+        unsafe {
+            let mut texture_id = 0;
+            gl::GenTextures(1, &mut texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+            let img = image::open(path).expect("Failed to load texture");
+            let img = img.flipv().into_rgba8();
+            let (width, height) = img.dimensions();
+            let data = img.into_raw();
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA as i32,
+                width as i32,
+                height as i32,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                data.as_ptr() as *const _,
+            );
+
+            gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            self.textures.push(texture_id);
+            self.textures.len() - 1
+        }
+}
 }
 pub mod keyboard {
     pub use sdl2::keyboard::{Keycode, Scancode, Mod};
