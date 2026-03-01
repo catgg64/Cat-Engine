@@ -37,6 +37,7 @@ impl CatEngine{
         gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
+            gl::Enable(gl::DEPTH_TEST);
         }
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
@@ -62,9 +63,9 @@ impl CatEngine{
     
 
     pub fn update(&mut self) {
-        //unsafe {
-        //    gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        //}
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
         self.running = self.input.update(&mut self.event_pump);
         self.window.gl_swap_window();
     }
