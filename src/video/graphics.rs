@@ -331,6 +331,7 @@ impl Cube {
         renderer.shader.set_mat4("model", &model);
         renderer.shader.set_mat4("view", &view);
         renderer.shader.set_mat4("projection", &projection);
+        renderer.shader.bind();
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
