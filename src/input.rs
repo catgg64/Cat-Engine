@@ -70,7 +70,7 @@ impl Input {
         pitch: &mut f64,
     ) {
         *yaw += (self.mouse_delta.0 as f64 * sensitivity as f64).to_radians();
-        *pitch += (self.mouse_delta.1 as f64 * sensitivity as f64).to_radians();
+        *pitch -= (self.mouse_delta.1 as f64 * sensitivity as f64).to_radians();
         // Optional: clamp pitch so camera doesn’t flip
         *pitch = pitch.clamp(-89.0, 89.0);
     }
