@@ -434,6 +434,40 @@ impl Renderer {
         self.draw_line(shape::point::Point { x: v2.x as f64, y: v2.y as f64 }, shape::point::Point { x: v0.x as f64, y: v0.y as f64 }, Vec3::new(1.0,1.0,1.0));
         // Later, you can fill and sample the texture properly
     }
+    pub fn load_texture(&mut self, path: &str) -> usize {
+        unsafe {
+            let mut texture_id = 0;
+            gl::GenTextures(1, &mut texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+            let img = image::open(path).expect("Failed to load texture");
+            let img = img.flipv().into_rgba8();
+            let (width, height) = img.dimensions();
+            let data = img.into_raw();
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA as i32,
+                width as i32,
+                height as i32,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                data.as_ptr() as *const _,
+            );
+
+            gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            self.textures.push(texture_id);
+            self.textures.len() - 1
+        }
+    }
 }
 pub mod keyboard {
     pub use sdl2::keyboard::{Keycode, Scancode, Mod};
