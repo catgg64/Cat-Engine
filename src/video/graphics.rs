@@ -6,7 +6,7 @@ use crate::shape::point::{self, Point};
 use crate::video::surface::Surface;
 use std::f64::consts::PI;
 use std::fs::ReadDir;
-use glam::Vec3;
+use glam::{ Vec3, Mat4 };
 use std::sync::Arc;
 use std::ffi::CString;
 use std::ptr;
@@ -15,10 +15,10 @@ use std::iter;
 fn create_whitespace_cstring_with_len(len: usize) -> CString {
     // allocate buffer of correct size
     let buffer: Vec<u8> = iter::repeat(b' ')
-        .take(len)
-        .collect();
+    .take(len)
+    .collect();
 
-    unsafe { CString::from_vec_unchecked(buffer) }
+unsafe { CString::from_vec_unchecked(buffer) }
 }
 
 pub fn rotate(
@@ -28,13 +28,13 @@ pub fn rotate(
 ) -> (f64, f64) {
     let (ox, oy) = origin;
     let (px, py) = point;
-
+    
     let cos_theta = angle.cos();
     let sin_theta = angle.sin();
-
+    
     let qx = ox + cos_theta * (px - ox) - sin_theta * (py - oy);
     let qy = oy + sin_theta * (px - ox) + cos_theta * (py - oy);
-
+    
     (qx, qy)
 }
 pub struct Coordinate {
@@ -50,7 +50,7 @@ impl Coordinate {
     pub fn get_xy(&self) -> (f64, f64) {
         (self.x, self.y)
     }
-
+    
     pub fn turn_into_point(&self) -> Point {
         Point::new(self.x, self.y).unwrap()
     }
@@ -66,46 +66,46 @@ impl ThirdDimensionCoordinate {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         ThirdDimensionCoordinate { x, y, z }
     }
-
+    
     pub fn get_xyz(&self) -> (f64, f64, f64) {
         (self.x, self.y, self.z)
     }
-
+    
     pub fn turn_into_xy(
-    &self,
-    camera_x: f64,
-    camera_y: f64,
-    camera_z: f64,
-    screen_width: i32,
-    screen_height: i32,
-    fov: i16,
-    yaw: f64,
-    pitch: f64,
-) -> Result<Coordinate, String> {
+        &self,
+        camera_x: f64,
+        camera_y: f64,
+        camera_z: f64,
+        screen_width: i32,
+        screen_height: i32,
+        fov: i16,
+        yaw: f64,
+        pitch: f64,
+    ) -> Result<Coordinate, String> {
         let dx = (self.x - camera_x) as f64;
         let dy = (self.y - camera_y) as f64;
         let dz = (self.z - camera_z) as f64;
-
+        
         let fov = fov as f64;
         let yaw_radians = (yaw as f64);
         let pitch_radians = (pitch as f64);
-
+        
         let mut dx = dx;
         let mut dy = dy;
         let mut dz = dz;
-
+        
         // Yaw (rotate around Y axis)
         let (new_dx, new_dz) = rotate((0.0, 0.0), (dx, dz), yaw_radians as f64);
         dx = new_dx;
         dz = new_dz;
-
+        
         // Pitch (rotate around X axis)
         let (new_dy, new_dz) = rotate((0.0, 0.0), (dy, dz), pitch_radians as f64);
         dy = new_dy;
         dz = new_dz;
         let mut projected_x: f64 = 0.0;
         let mut projected_y: f64 = 0.0;
-
+        
         if dz <= 0.1 {
             return Err("out of bounds".to_string());
         }
@@ -113,13 +113,20 @@ impl ThirdDimensionCoordinate {
             projected_x = (dx * fov) / dz;
             projected_y = (dy * fov) / dz;
         }
-
+        
         
         let screen_x = screen_width as f64 / 2.0 + projected_x;
         let screen_y = screen_height as f64 / 2.0 + projected_y;
-
+        
         Ok(Coordinate::new(screen_x, screen_y))
     }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct Vertex {
+    pos: [f32; 3],
+    tex: [f32; 2],
 }
 
 pub struct Mesh {
@@ -223,97 +230,116 @@ impl Mesh {
 }
 
 pub struct Cube {
-    position: ThirdDimensionCoordinate,
-    width: i64,
-    height: i64,
-    pub texture_index: usize,
+    vao: u32,
+    vbo: u32,
+    ebo: u32,
+    texture_index: usize,
+    position: Vec3,
+    width: f32,
+    height: f32,
+    depth: f32,
 }
 
 impl Cube {
-    pub fn new(position: ThirdDimensionCoordinate, width: i32, height: i32, texture_index: usize) -> Self {
-        Cube{ position, width: width as i64, height: height as i64, texture_index }
+    pub fn new(position: Vec3, width: f32, height: f32, depth: f32, texture_index: usize) -> Self {
+        let vertices: [Vertex; 8] = [
+            Vertex { pos: [0.0, 0.0, 0.0], tex: [0.0, 0.0] }, // 0: bottom-left-front
+            Vertex { pos: [width, 0.0, 0.0], tex: [1.0, 0.0] }, // 1: bottom-right-front
+            Vertex { pos: [width, height, 0.0], tex: [1.0, 1.0] }, // 2: top-right-front
+            Vertex { pos: [0.0, height, 0.0], tex: [0.0, 1.0] }, // 3: top-left-front
+            Vertex { pos: [0.0, 0.0, -depth], tex: [0.0, 0.0] }, // 4: bottom-left-back
+            Vertex { pos: [width, 0.0, -depth], tex: [1.0, 0.0] }, // 5: bottom-right-back
+            Vertex { pos: [width, height, -depth], tex: [1.0, 1.0] }, // 6: top-right-back
+            Vertex { pos: [0.0, height, -depth], tex: [0.0, 1.0] }, // 7: top-left-back
+        ];
+
+        let indices: [u32; 36] = [
+            0, 1, 2, 2, 3, 0, // front
+            5, 4, 7, 7, 6, 5, // back
+            4, 0, 3, 3, 7, 4, // left
+            1, 5, 6, 6, 2, 1, // right
+            3, 2, 6, 6, 7, 3, // top
+            4, 5, 1, 1, 0, 4, // bottom
+        ];
+
+        let mut vao = 0;
+        let mut vbo = 0;
+        let mut ebo = 0;
+
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            gl::GenBuffers(1, &mut ebo);
+
+            gl::BindVertexArray(vao);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<Vertex>()) as isize,
+                vertices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (indices.len() * std::mem::size_of::<u32>()) as isize,
+                indices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+
+            // position
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                ptr::null(),
+            );
+            gl::EnableVertexAttribArray(0);
+
+            // tex coords
+            gl::VertexAttribPointer(
+                1,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                (3 * std::mem::size_of::<f32>()) as *const _,
+            );
+            gl::EnableVertexAttribArray(1);
+
+            gl::BindVertexArray(0);
+        }
+
+        Cube {
+            vao,
+            vbo,
+            ebo,
+            texture_index,
+            position,
+            width,
+            height,
+            depth,
+        }
     }
 
-    pub fn draw(&self, renderer: &mut Renderer, camera_x: f32, camera_y: f32, camera_z: f32, yaw: f32, pitch: f32, width: i32, height: i32, fov: f32, cat_engine: &CatEngine) {
-        use glam::Vec3;
-
-        // World-space vertices
-        let verts = [
-            Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32),
-            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32),
-            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32 - self.height as f32, self.position.z as f32),
-            Vec3::new(self.position.x as f32, self.position.y as f32 - self.height as f32, self.position.z as f32),
-
-            Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
-            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32, self.position.z as f32 - self.width as f32),
-            Vec3::new(self.position.x as f32 + self.width as f32, self.position.y as f32 - self.height as f32, self.position.z as f32 - self.width as f32),
-            Vec3::new(self.position.x as f32, self.position.y as f32 - self.height as f32, self.position.z as f32 - self.width as f32),
-        ];
-
-        // Transform vertices into camera space
-        let (camera_pos, front, view_matrix) = cat_engine.get_camera_specs(camera_x, camera_y, camera_z, yaw, pitch);
-        let verts_cam: [Vec3; 8] = verts.map(|v| v - camera_pos);
-
-        // 1. Projection
-        let projection = glam::Mat4::perspective_rh(fov.to_radians(), width as f32 / height as f32, 0.1, 1000.0);
-
-        // 2. View (camera)
-        let (_, _, view_matrix) = cat_engine.get_camera_specs(camera_x, camera_y, camera_z, yaw, pitch);
-
-        // 3. Model (cube position + scale)
-        let model = glam::Mat4::from_translation(Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32))
-                    * glam::Mat4::from_scale(Vec3::new(self.width as f32, self.height as f32, self.width as f32));
-
-        // 4. Send to shader
+    pub fn draw(&self, renderer: &Renderer, view: Mat4, projection: Mat4) {
+        let model = Mat4::from_translation(self.position);
         renderer.shader.set_mat4("model", &model);
-        renderer.shader.set_mat4("view", &view_matrix);
+        renderer.shader.set_mat4("view", &view);
         renderer.shader.set_mat4("projection", &projection);
 
-        // Each face as a quad
-        let faces: [[usize; 4]; 6] = [
-            [0, 1, 2, 3], // front
-            [4, 5, 6, 7], // back
-            [0, 3, 7, 4], // left
-            [1, 5, 6, 2], // right
-            [0, 1, 5, 4], // top
-            [3, 2, 6, 7], // bottom
-        ];
-        
-        let view_matrix_array: [[f32; 4]; 4] = view_matrix.to_cols_array_2d();
-
-        for face in faces {
-            // Get the 4 vertices for the face
-            let quad_world = [
-                verts[face[0]],
-                verts[face[1]],
-                verts[face[2]],
-                verts[face[3]],
-            ];
-
-            // Transform each vertex by the view matrix
-            let quad_cam: [Vec3; 4] = quad_world.map(|v| {
-                let v4 = view_matrix * v.extend(1.0); // Mat4 * Vec4
-                Vec3::new(v4.x, v4.y, v4.z)
-            });
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0);
-                gl::BindTexture(gl::TEXTURE_2D, self.texture_index as u32);
-            }
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, self.texture_index as u32);
             renderer.shader.set_int("tex", 0);
 
-            let mut vao: u32 = 0;
-            unsafe {
-                gl::GenVertexArrays(1, &mut vao);
-                gl::BindVertexArray(vao);
-            }
-
-            unsafe {
-                gl::BindVertexArray(vao);
-                gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, ptr::null());
-                gl::BindVertexArray(0);
-            }
-            
-            //renderer.draw_textured_quad(&quad_cam, self.texture_index, view_matrix_array);
+            gl::BindVertexArray(self.vao);
+            gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, ptr::null());
+            gl::BindVertexArray(0);
         }
     }
 }
