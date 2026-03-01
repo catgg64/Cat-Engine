@@ -298,7 +298,6 @@ impl Cube {
                 std::mem::size_of::<Vertex>() as i32,
                 ptr::null(),
             );
-            println!("Vertex size: {}", std::mem::size_of::<Vertex>());
             gl::EnableVertexAttribArray(0);
 
             // tex coords

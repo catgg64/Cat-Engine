@@ -107,7 +107,7 @@ impl CatEngine{
 pub struct Renderer {
     quad_vao: u32,
     shader: Shader,
-    projection: Mat4,
+    pub projection: Mat4,
     line_vao: u32,
     line_vbo: u32,
     line_shader: Shader,
