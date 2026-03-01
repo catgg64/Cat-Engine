@@ -4,6 +4,7 @@ use sdl2::video::GLProfile;
 use video::surface::Surface;
 use video::graphics::Shader;
 use glam::{ Mat4, Vec3 };
+use std::ptr;
 
 use crate::video::surface;
 pub mod color;
@@ -244,6 +245,59 @@ impl Renderer {
             -0.5,-0.5,-0.5, 1.0,1.0,
             0.5,-0.5,-0.5, 0.0,1.0,
         ];
+
+        let mut vao = 0;
+        let mut vbo = 0;
+        let mut ebo = 0;
+
+        let indices: [u32; 36] = [
+            // front
+            0, 1, 2, 2, 3, 0,
+            // back
+            4, 5, 6, 6, 7, 4,
+            // left
+            0, 3, 7, 7, 4, 0,
+            // right
+            1, 5, 6, 6, 2, 1,
+            // top
+            0, 1, 5, 5, 4, 0,
+            // bottom
+            3, 2, 6, 6, 7, 3
+        ];
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            gl::GenBuffers(1, &mut ebo);
+
+            gl::BindVertexArray(vao);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr() as *const _,
+                gl::STATIC_DRAW
+            );
+
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (indices.len() * std::mem::size_of::<u32>()) as isize,
+                indices.as_ptr() as *const _,
+                gl::STATIC_DRAW
+            );
+
+            // position attribute
+            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 5 * std::mem::size_of::<f32>() as i32, ptr::null());
+            gl::EnableVertexAttribArray(0);
+
+            // texcoord attribute
+            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 5 * std::mem::size_of::<f32>() as i32, (3 * std::mem::size_of::<f32>()) as *const _);
+            gl::EnableVertexAttribArray(1);
+
+            gl::BindVertexArray(0);
+            // At the start, after initializing OpenGL context
+        }
 
         let mut cube_vao = 0;
         let mut cube_vbo = 0;

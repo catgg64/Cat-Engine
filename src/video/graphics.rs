@@ -234,7 +234,7 @@ impl Cube {
         Cube{ position, width: width as i64, height: height as i64, texture_index }
     }
 
-    pub fn draw(&self, renderer: &mut Renderer, camera_x: f32, camera_y: f32, camera_z: f32, yaw: f32, pitch: f32, cat_engine: &CatEngine) {
+    pub fn draw(&self, renderer: &mut Renderer, camera_x: f32, camera_y: f32, camera_z: f32, yaw: f32, pitch: f32, width: i32, height: i32, fov: f32, cat_engine: &CatEngine) {
         use glam::Vec3;
 
         // World-space vertices
@@ -254,6 +254,21 @@ impl Cube {
         let (camera_pos, front, view_matrix) = cat_engine.get_camera_specs(camera_x, camera_y, camera_z, yaw, pitch);
         let verts_cam: [Vec3; 8] = verts.map(|v| v - camera_pos);
 
+        // 1. Projection
+        let projection = glam::Mat4::perspective_rh(fov.to_radians(), width as f32 / height as f32, 0.1, 1000.0);
+
+        // 2. View (camera)
+        let (_, _, view_matrix) = cat_engine.get_camera_specs(camera_x, camera_y, camera_z, yaw, pitch);
+
+        // 3. Model (cube position + scale)
+        let model = glam::Mat4::from_translation(Vec3::new(self.position.x as f32, self.position.y as f32, self.position.z as f32))
+                    * glam::Mat4::from_scale(Vec3::new(self.width as f32, self.height as f32, self.width as f32));
+
+        // 4. Send to shader
+        renderer.shader.set_mat4("model", &model);
+        renderer.shader.set_mat4("view", &view_matrix);
+        renderer.shader.set_mat4("projection", &projection);
+
         // Each face as a quad
         let faces: [[usize; 4]; 6] = [
             [0, 1, 2, 3], // front
@@ -263,7 +278,7 @@ impl Cube {
             [0, 1, 5, 4], // top
             [3, 2, 6, 7], // bottom
         ];
-
+        
         let view_matrix_array: [[f32; 4]; 4] = view_matrix.to_cols_array_2d();
 
         for face in faces {
@@ -280,8 +295,25 @@ impl Cube {
                 let v4 = view_matrix * v.extend(1.0); // Mat4 * Vec4
                 Vec3::new(v4.x, v4.y, v4.z)
             });
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, self.texture_index as u32);
+            }
+            renderer.shader.set_int("tex", 0);
 
-            renderer.draw_textured_quad(&quad_cam, self.texture_index, view_matrix_array);
+            let mut vao: u32 = 0;
+            unsafe {
+                gl::GenVertexArrays(1, &mut vao);
+                gl::BindVertexArray(vao);
+            }
+
+            unsafe {
+                gl::BindVertexArray(vao);
+                gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, ptr::null());
+                gl::BindVertexArray(0);
+            }
+            
+            //renderer.draw_textured_quad(&quad_cam, self.texture_index, view_matrix_array);
         }
     }
 }
