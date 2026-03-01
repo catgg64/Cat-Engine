@@ -232,7 +232,6 @@ impl Mesh {
 pub struct Cube {
     vao: u32,
     vbo: u32,
-    ebo: u32,
     texture_index: usize,
     position: Vec3,
     width: f32,
@@ -242,15 +241,54 @@ pub struct Cube {
 
 impl Cube {
     pub fn new(position: Vec3, width: f32, height: f32, depth: f32, texture_index: usize) -> Self {
-        let vertices: [Vertex; 8] = [
-            Vertex { pos: [0.0, 0.0, 0.0], tex: [0.0, 0.0] }, // 0: bottom-left-front
-            Vertex { pos: [width, 0.0, 0.0], tex: [1.0, 0.0] }, // 1: bottom-right-front
-            Vertex { pos: [width, height, 0.0], tex: [1.0, 1.0] }, // 2: top-right-front
-            Vertex { pos: [0.0, height, 0.0], tex: [0.0, 1.0] }, // 3: top-left-front
-            Vertex { pos: [0.0, 0.0, -depth], tex: [0.0, 0.0] }, // 4: bottom-left-back
-            Vertex { pos: [width, 0.0, -depth], tex: [1.0, 0.0] }, // 5: bottom-right-back
-            Vertex { pos: [width, height, -depth], tex: [1.0, 1.0] }, // 6: top-right-back
-            Vertex { pos: [0.0, height, -depth], tex: [0.0, 1.0] }, // 7: top-left-back
+        let vertices: [Vertex; 36] = [
+            // FRONT
+            Vertex { pos: [0.0, 0.0, 0.0], tex: [0.0, 0.0] },
+            Vertex { pos: [1.0, 0.0, 0.0], tex: [1.0, 0.0] },
+            Vertex { pos: [1.0, 1.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 1.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, 0.0], tex: [0.0, 1.0] },
+            Vertex { pos: [0.0, 0.0, 0.0], tex: [0.0, 0.0] },
+
+            // BACK
+            Vertex { pos: [1.0, 0.0, -1.0], tex: [0.0, 0.0] },
+            Vertex { pos: [0.0, 0.0, -1.0], tex: [1.0, 0.0] },
+            Vertex { pos: [0.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 1.0, -1.0], tex: [0.0, 1.0] },
+            Vertex { pos: [1.0, 0.0, -1.0], tex: [0.0, 0.0] },
+
+            // LEFT
+            Vertex { pos: [0.0, 0.0, -1.0], tex: [0.0, 0.0] },
+            Vertex { pos: [0.0, 0.0, 0.0], tex: [1.0, 0.0] },
+            Vertex { pos: [0.0, 1.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, -1.0], tex: [0.0, 1.0] },
+            Vertex { pos: [0.0, 0.0, -1.0], tex: [0.0, 0.0] },
+
+            // RIGHT
+            Vertex { pos: [1.0, 0.0, 0.0], tex: [0.0, 0.0] },
+            Vertex { pos: [1.0, 0.0, -1.0], tex: [1.0, 0.0] },
+            Vertex { pos: [1.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 1.0, 0.0], tex: [0.0, 1.0] },
+            Vertex { pos: [1.0, 0.0, 0.0], tex: [0.0, 0.0] },
+
+            // TOP
+            Vertex { pos: [0.0, 1.0, 0.0], tex: [0.0, 0.0] },
+            Vertex { pos: [1.0, 1.0, 0.0], tex: [1.0, 0.0] },
+            Vertex { pos: [1.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 1.0, -1.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, -1.0], tex: [0.0, 1.0] },
+            Vertex { pos: [0.0, 1.0, 0.0], tex: [0.0, 0.0] },
+
+            // BOTTOM
+            Vertex { pos: [0.0, 0.0, -1.0], tex: [0.0, 0.0] },
+            Vertex { pos: [1.0, 0.0, -1.0], tex: [1.0, 0.0] },
+            Vertex { pos: [1.0, 0.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [1.0, 0.0, 0.0], tex: [1.0, 1.0] },
+            Vertex { pos: [0.0, 0.0, 0.0], tex: [0.0, 1.0] },
+            Vertex { pos: [0.0, 0.0, -1.0], tex: [0.0, 0.0] },
         ];
 
         let indices: [u32; 36] = [
@@ -264,12 +302,10 @@ impl Cube {
 
         let mut vao = 0;
         let mut vbo = 0;
-        let mut ebo = 0;
 
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
             gl::GenBuffers(1, &mut vbo);
-            gl::GenBuffers(1, &mut ebo);
 
             gl::BindVertexArray(vao);
 
@@ -281,14 +317,6 @@ impl Cube {
                 gl::STATIC_DRAW,
             );
 
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (indices.len() * std::mem::size_of::<u32>()) as isize,
-                indices.as_ptr() as *const _,
-                gl::STATIC_DRAW,
-            );
-
             // position
             gl::VertexAttribPointer(
                 0,
@@ -296,7 +324,7 @@ impl Cube {
                 gl::FLOAT,
                 gl::FALSE,
                 std::mem::size_of::<Vertex>() as i32,
-                ptr::null(),
+                std::ptr::null(),
             );
             gl::EnableVertexAttribArray(0);
 
@@ -317,7 +345,6 @@ impl Cube {
         Cube {
             vao,
             vbo,
-            ebo,
             texture_index,
             position,
             width,
@@ -339,7 +366,7 @@ impl Cube {
             renderer.shader.set_int("tex", 0);
 
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, ptr::null());
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
             gl::BindVertexArray(0);
         }
     }
