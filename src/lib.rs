@@ -344,7 +344,7 @@ impl Renderer {
 
         let projection = Mat4::perspective_rh_gl(
             fov.to_radians(),
-            screen_width / screen_height,
+            screen_width as f32 / screen_height as f32,
             near_plane,
             far_plane,
         );
