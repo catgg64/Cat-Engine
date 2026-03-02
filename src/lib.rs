@@ -42,9 +42,9 @@ impl CatEngine{
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
         let mut running: bool = true;
-        let fov = 300.0;
+        let fov = 45.0;
         let mut renderer = Renderer::new(width as f32, height as f32, fov, 0.01, 1000.0);
-        let fov = 300;
+        let fov = 45;
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
         }
