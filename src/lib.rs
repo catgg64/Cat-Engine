@@ -68,10 +68,25 @@ impl CatEngine{
         self.window.gl_swap_window();
     }
 
-    pub fn set_fov(&mut self, fov: i16, screen_width: u32, screen_height: u32, near_clamp: f32, far_clamp: f32) {
-        self.renderer.projection = Mat4::perspective_rh_gl(fov as f32, (screen_width / screen_height) as f32, near_clamp, far_clamp);;
-        self.fov = fov;
-    }    
+    pub fn set_fov(
+    &mut self,
+    fov: i16,
+    screen_width: u32,
+    screen_height: u32,
+    near_clamp: f32,
+    far_clamp: f32,
+) {
+    let aspect = screen_width as f32 / screen_height as f32;
+
+    self.renderer.projection = Mat4::perspective_rh_gl(
+        (fov as f32).to_radians(),
+        aspect,
+        near_clamp,
+        far_clamp,
+    );
+
+    self.fov = fov;
+}
 
     pub fn get_fov(&mut self) -> i16 {
         self.fov
