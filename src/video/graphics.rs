@@ -6,7 +6,7 @@ use crate::shape::point::{self, Point};
 use crate::video::surface::Surface;
 use std::f64::consts::PI;
 use std::fs::ReadDir;
-use glam::{ Mat4, Vec3, Vec4 };
+use glam::{ Mat4, Vec2, Vec3, Vec4 };
 use std::sync::Arc;
 use std::ffi::CString;
 use std::ptr;
@@ -128,57 +128,96 @@ struct Vertex {
     pos: [f32; 3],
     tex: [f32; 2],
 }
+struct MeshVertex {
+    pub position: Vec3,
+    pub uv: Vec2,
+}
 
-//struct MeshVertex {
-//
-//}
+pub struct Mesh {
+    vao: u32,
+    vbo: u32,
+    ebo: u32,
+    index_count: usize,
+    texture_index: usize,
+}
 
-// pub struct Mesh {
-//     pub vertices: Vec<Vertex>,
-//     pub indices: Vec<Vec3>,
+impl Mesh {
+    pub fn new(vertices: &[f32], indices: &[u32], texture_index: usize) -> Self {
+        let mut vao = 0;
+        let mut vbo = 0;
+        let mut ebo = 0;
 
-//     vao: u32,
-//     vbo: u32,
-//     ebo: u32,
-// }
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            gl::GenBuffers(1, &mut ebo);
 
-// impl Mesh {
-//     pub fn new(vertices: Vec<Vertex>, indices: Vec<Vec3>) -> Self {
-//         Self {
-//             vertices, indices,
-//         }
-//     }
+            gl::BindVertexArray(vao);
 
-//     pub fn draw(&mut self, renderer: &Renderer, color: Color, camera_x: f64, camera_y: f64, camera_z: f64, screen_width: i32, screen_height: i32, fov: i16, yaw: f64, pitch: f64) {
-//         for edge in &mut self.edges {
-//             let a = self.vertices[edge.0]
-//                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
 
-//             let b = self.vertices[edge.1]
-//                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (indices.len() * std::mem::size_of::<u32>()) as isize,
+                indices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
 
-//             let c = self.vertices[edge.2]
-//                 .turn_into_xy(camera_x, camera_y, camera_z, screen_width, screen_height, fov, yaw, pitch);
+            // Position attribute (location = 0)
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                5 * std::mem::size_of::<f32>() as i32,
+                std::ptr::null(),
+            );
+            gl::EnableVertexAttribArray(0);
 
-//             if let (Ok(p1), Ok(p2), Ok(p3)) = (a, b, c) {
-//                 let (r, g, b) = color.return_rgb();
-//                 let new_cords = [[p1.x, p1.y], [p1.x, p3.y], [p2.x, p2.y], [p2.x, p1.y]];
-//                 let new_cords_as_tuples: [(f32, f32); 4] = [
-//                     (new_cords[0][0] as f32, new_cords[0][1] as f32),
-//                     (new_cords[1][0] as f32, new_cords[1][1] as f32),
-//                     (new_cords[2][0] as f32, new_cords[2][1] as f32),
-//                     (new_cords[3][0] as f32, new_cords[3][1] as f32),
-//                 ];
+            // UV attribute (location = 1)
+            gl::VertexAttribPointer(
+                1,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                5 * std::mem::size_of::<f32>() as i32,
+                (3 * std::mem::size_of::<f32>()) as *const _,
+            );
+            gl::EnableVertexAttribArray(1);
 
-//                 renderer.draw_line(p1.turn_into_point(), p2.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
-//                 renderer.draw_line(p1.turn_into_point(), p3.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
-//                 renderer.draw_line(p2.turn_into_point(), p3.turn_into_point(), Vec3::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
-//                 renderer.draw(&edge.3, p1.x as f32, p1.y as f32);
+            gl::BindVertexArray(0);
+        }
 
-//             }
-//         }
-//     }
-// }
+        Self {
+            vao,
+            vbo,
+            ebo,
+            index_count: indices.len(),
+            texture_index,
+        }
+    }
+
+    pub fn draw(&self, shader: &crate::video::graphics::Shader, renderer: Renderer) {
+        shader.bind();
+
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, renderer.textures[self.texture_index]);
+            shader.set_int("tex", 0);
+
+            gl::BindVertexArray(self.vao);
+            gl::DrawElements(gl::TRIANGLES, self.index_count as i32, gl::UNSIGNED_INT, std::ptr::null());
+            gl::BindVertexArray(0);
+        }
+    }
+}
 
 pub struct Cube {
     vao: u32,
