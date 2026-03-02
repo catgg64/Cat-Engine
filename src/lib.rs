@@ -337,10 +337,10 @@ impl Renderer {
             gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 5 * 4, (3 * 4) as *const _);
             gl::EnableVertexAttribArray(1);
         }
-        let line_vertex_path = format!("{}/shaders/line.vert", env!("CARGO_MANIFEST_DIR"));
-        let line_fragment_path = format!("{}/shaders/line.frag", env!("CARGO_MANIFEST_DIR"));
-        let cube_vertex_path = format!("{}/shaders/cube.vert", env!("CARGO_MANIFEST_DIR"));
-        let cube_fragment_path = format!("{}/shaders/cube.frag", env!("CARGO_MANIFEST_DIR"));
+        let line_vertex_path = format!("{}/line.vert", env!("CARGO_MANIFEST_DIR"));
+        let line_fragment_path = format!("{}/line.frag", env!("CARGO_MANIFEST_DIR"));
+        let cube_vertex_path = format!("{}/cube.vert", env!("CARGO_MANIFEST_DIR"));
+        let cube_fragment_path = format!("{}/cube.frag", env!("CARGO_MANIFEST_DIR"));
         
 
         let line_shader = Shader::new(&line_vertex_path, &line_fragment_path);
