@@ -6,7 +6,7 @@ use crate::shape::point::{self, Point};
 use crate::video::surface::Surface;
 use std::f64::consts::PI;
 use std::fs::ReadDir;
-use glam::{ Mat4, Vec2, Vec3, Vec4 };
+use glam::{ Mat4, Vec2, Vec3, Vec4, Quat };
 use std::sync::Arc;
 use std::ffi::CString;
 use std::ptr;
@@ -139,6 +139,7 @@ pub struct Mesh {
     ebo: u32,
     index_count: usize,
     texture_index: usize,
+    shader: Shader,
 }
 
 impl Mesh {
@@ -195,26 +196,37 @@ impl Mesh {
             gl::BindVertexArray(0);
         }
 
+        let mesh_vertex_path = format!("{}/mesh.vert", env!("CARGO_MANIFEST_DIR"));
+        let mesh_fragment_path = format!("{}/mesh.frag", env!("CARGO_MANIFEST_DIR"));
+        
+        let shader = Shader::new(&mesh_vertex_path, &mesh_fragment_path);
+
         Self {
             vao,
             vbo,
             ebo,
             index_count: indices.len(),
             texture_index,
+            shader,
         }
     }
 
-    pub fn draw(&self, renderer: &Renderer) {
-        let mesh_vertex_path = format!("{}/mesh.vert", env!("CARGO_MANIFEST_DIR"));
-        let mesh_fragment_path = format!("{}/mesh.frag", env!("CARGO_MANIFEST_DIR"));
-        
-        let shader = Shader::new(&mesh_vertex_path, &mesh_fragment_path);
-        shader.bind();
+    pub fn draw(&self, renderer: &Renderer, view: Mat4, projection: Mat4) {
+        let model = Mat4::from_scale_rotation_translation(
+            Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
+            Quat::IDENTITY,
+            Vec3::new(0.0, 0.0, -10.0), // place in front of camera
+        );
+
+        self.shader.bind();
+        self.shader.set_mat4("model", &model);
+        self.shader.set_mat4("view", &view);
+        self.shader.set_mat4("projection", &projection);
 
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, renderer.textures[self.texture_index]);
-            shader.set_int("tex", 0);
+            self.shader.set_int("tex", 0);
 
             gl::BindVertexArray(self.vao);
             gl::DrawElements(gl::TRIANGLES, self.index_count as i32, gl::UNSIGNED_INT, std::ptr::null());
