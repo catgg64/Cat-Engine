@@ -204,7 +204,11 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, shader: &crate::video::graphics::Shader, renderer: Renderer) {
+    pub fn draw(&self, renderer: Renderer) {
+        let mesh_vertex_path = format!("{}/mesh.vert", env!("CARGO_MANIFEST_DIR"));
+        let mesh_fragment_path = format!("{}/mesh.frag", env!("CARGO_MANIFEST_DIR"));
+        
+        let shader = Shader::new(&mesh_vertex_path, &mesh_fragment_path);
         shader.bind();
 
         unsafe {
