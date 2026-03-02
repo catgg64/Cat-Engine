@@ -98,7 +98,7 @@ impl CatEngine{
         let front = Vec3::new(
             yaw.cos() * pitch.cos(),
             pitch.sin(),
-            yaw.sin() * pitch.cos(),
+            -yaw.sin() * pitch.cos(),  // <-- FLIPPED
         ).normalize();
 
         let view_matrix = Mat4::look_at_rh(
