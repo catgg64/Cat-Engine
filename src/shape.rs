@@ -96,23 +96,27 @@ pub fn load_obj<P: AsRef<Path>>(path: P) -> ObjData {
                 ]);
             }
             "f" => {
-                for &vertex in &parts[1..] {
-                    // OBJ face format: vertex/uv/normal
+                let face_vertices: Vec<(usize, usize)> = parts[1..].iter().map(|&vertex| {
                     let indices_str: Vec<&str> = vertex.split('/').collect();
-                    let pos_idx: usize = indices_str[0].parse::<usize>().unwrap() - 1;
-                    let uv_idx: usize = indices_str[1].parse::<usize>().unwrap() - 1;
+                    let pos_idx = indices_str[0].parse::<usize>().unwrap() - 1;
+                    let uv_idx = indices_str[1].parse::<usize>().unwrap() - 1;
+                    (pos_idx, uv_idx)
+                }).collect();
 
-                    // Create a unique vertex key
-                    let key = (pos_idx, uv_idx);
-                    if let Some(&i) = vertex_map.get(&key) {
-                        indices.push(i);
-                    } else {
-                        let pos = positions[pos_idx];
-                        let uv = uvs[uv_idx];
-                        vertices.extend_from_slice(&[pos[0], pos[1], pos[2], uv[0], uv[1]]);
-                        indices.push(next_index);
-                        vertex_map.insert(key, next_index);
-                        next_index += 1;
+                // Triangulate the face (supports quads and triangles)
+                for i in 1..(face_vertices.len() - 1) {
+                    for &idx in &[0, i, i + 1] {
+                        let key = face_vertices[idx];
+                        if let Some(&i) = vertex_map.get(&key) {
+                            indices.push(i);
+                        } else {
+                            let pos = positions[key.0];
+                            let uv = uvs[key.1];
+                            vertices.extend_from_slice(&[pos[0], pos[1], pos[2], uv[0], uv[1]]);
+                            indices.push(next_index);
+                            vertex_map.insert(key, next_index);
+                            next_index += 1;
+                        }
                     }
                 }
             }
