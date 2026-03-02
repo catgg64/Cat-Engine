@@ -42,7 +42,8 @@ impl CatEngine{
         let screen_rect = sdl2::rect::Rect::new(0, 0, width, height);
         let input: Input = input::Input::new(context);
         let mut running: bool = true;
-        let mut renderer = Renderer::new(width as f32, height as f32);
+        let fov = 300.0;
+        let mut renderer = Renderer::new(width as f32, height as f32, fov, 0.01, 1000.0);
         let fov = 300;
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
@@ -67,8 +68,9 @@ impl CatEngine{
         self.window.gl_swap_window();
     }
 
-    pub fn set_fov(&mut self, fov: i16) {
-        self.fov = fov
+    pub fn set_fov(&mut self, fov: i16, screen_width: u32, screen_height: u32, near_clamp: u32, far_clamp: u32) {
+        self.renderer.projection = Mat4::perspective_rh_gl(fov as f32, (screen_width / screen_height) as f32, near_clamp as f32, far_clamp as f32);;
+        self.fov = fov;
     }    
 
     pub fn get_fov(&mut self) -> i16 {
@@ -114,7 +116,7 @@ pub struct Renderer {
     textures: Vec<u32>,
 }
 impl Renderer {
-    pub fn new(screen_width: f32, screen_height: f32) -> Self {
+    pub fn new(screen_width: f32, screen_height: f32, fov:f32, near_plane: f32, far_plane: f32) -> Self {
         let mut line_vao = 0;
         let mut line_vbo = 0;
         let mut quad_vao = 0;
@@ -326,10 +328,10 @@ impl Renderer {
         let shader = Shader::new("cube.vert", "cube.frag");
 
         let projection = Mat4::perspective_rh_gl(
-            45.0_f32.to_radians(),
+            fov.to_radians(),
             screen_width / screen_height,
-            0.1,
-            100.0,
+            near_plane,
+            far_plane,
         );
         shader.bind();
         shader.set_mat4("projection", &projection);
