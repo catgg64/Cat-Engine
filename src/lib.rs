@@ -78,7 +78,7 @@ impl CatEngine{
 ) {
     let aspect = screen_width as f32 / screen_height as f32;
 
-    self.renderer.projection = Mat4::perspective_lh(
+    self.renderer.projection = Mat4::perspective_rh_gl(
         (fov as f32).to_radians(),
         aspect,
         near_clamp,
@@ -101,7 +101,7 @@ impl CatEngine{
             -yaw.sin() * pitch.cos(),  // <-- FLIPPED
         ).normalize();
 
-        let view_matrix = Mat4::look_at_lh(
+        let view_matrix = Mat4::look_at_rh(
             camera_position,
             camera_position + front,
             Vec3::Y,
@@ -342,7 +342,7 @@ impl Renderer {
 
         let shader = Shader::new("cube.vert", "cube.frag");
 
-        let projection = Mat4::perspective_lh(
+        let projection = Mat4::perspective_rh_gl(
             fov.to_radians(),
             screen_width / screen_height,
             near_plane,
