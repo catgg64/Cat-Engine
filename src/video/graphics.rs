@@ -211,11 +211,11 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, renderer: &Renderer, view: Mat4, projection: Mat4) {
+    pub fn draw(&self, renderer: &Renderer, view: Mat4, projection: Mat4, position: Vec3) {
         let model = Mat4::from_scale_rotation_translation(
             Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
             Quat::IDENTITY,
-            Vec3::new(0.0, 0.0, -10.0), // place in front of camera
+            Vec3::new(0.0 + position.x, 0.0 + position.y, 0.0 + position.z),
         );
 
         self.shader.bind();
