@@ -1,13 +1,17 @@
 use image::ImageError;
 
-use crate::video::surface;
+use crate::{math::Coordinate2D};
 
 pub struct Surface {
     pub texture_id: u32,
     pub width: u32,
     pub height: u32,
-    pub corners:  [(u32, u32); 4],
-    pub data: Vec<u8>
+    pub corners:  [Coordinate2D; 4],
+    pub data: Vec<u8>,
+    pub vao: u32,
+    pub vbo: u32,
+    pub ebo: u32,
+    pub uv_vbo: u32,
 }
 
 impl Surface {
@@ -36,11 +40,45 @@ impl Surface {
         }
 
         let mut corners = [
-            (0, 0),
-            (width, 0),
-            (width, height),
-            (0, height),
+            Coordinate2D{0: 0.0, 1: 0.0},
+            Coordinate2D{0: width as f32, 1: 0.0},
+            Coordinate2D{0: width as f32, 1: height as f32},
+            Coordinate2D{0: 0.0, 1: height as f32},
         ];
+
+        let mut vao = 0;
+        let mut vbo = 0;
+        let mut ebo = 0;
+        let mut uv_vbo = 0;
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            gl::GenBuffers(1, &mut ebo);
+            
+            gl::BindVertexArray(vao);
+            
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
+            gl::VertexAttribPointer(
+                0,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<crate::math::Coordinate2D>() as i32,
+                std::ptr::null(),
+            );
+            gl::EnableVertexAttribArray(0);
+            
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo); 
+            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+            
+            gl::GenBuffers(1, &mut uv_vbo);
+            gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
+            gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<crate::math::Coordinate2D>() as i32, std::ptr::null());
+            gl::EnableVertexAttribArray(1);
+        }
+        
 
         Surface {
             texture_id,
@@ -48,10 +86,14 @@ impl Surface {
             height,
             corners,
             data,
+            vao,
+            vbo,
+            ebo,
+            uv_vbo,
         }
     }
 
-    pub fn strech(&mut self, new_corners: [(u32, u32); 4]) {
+    pub fn strech(&mut self, new_corners: [Coordinate2D; 4]) {
         self.corners = new_corners
     }
 
@@ -61,23 +103,8 @@ impl Surface {
         }
     }
 
-    pub fn load(&mut self) -> Result<(), ImageError>{
-        unsafe {
-            self.bind();
+    pub fn update_gl_proprieties(&mut self, pos_x: i32, pos_y: i32) {
 
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGBA as i32,
-                self.width as i32,
-                self.height as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                self.data.as_ptr() as *const _,
-            );
-            Ok(())
-        }
     }
 }
 

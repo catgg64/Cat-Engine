@@ -36,7 +36,9 @@ impl CatEngine {
         gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
-            gl::Disable(gl::DEPTH_TEST);
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
         let mut renderer = Renderer::new(width, height);
         let mut input = input::Input::new(&sdl_context);
@@ -63,7 +65,7 @@ impl CatEngine {
         let (true_color_r, true_color_g, true_color_b, true_color_a) = (color.r / 255, color.g / 255, color.b / 255, color.a / 255);
         unsafe {
             gl::ClearColor(true_color_r as f32,true_color_g as f32,true_color_b as f32,true_color_a as f32);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
     }
 }

@@ -129,10 +129,6 @@ impl Drop for Shader {
 
 pub struct Renderer {
     texture_shader: Shader,
-    texture_vao: u32,
-    texture_vbo: u32,
-    texture_ebo: u32,
-    texture_uv_vbo: u32,
     screen_width: u32,
     screen_height: u32,
 }
@@ -140,55 +136,25 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(screen_width: u32, screen_height: u32) -> Self {
         let texture_shader = Shader::new("texture.vert", "texture.frag");
-        let mut texture_vao = 0;
-        let mut texture_vbo = 0;
-        let mut texture_ebo = 0;
-        let mut texture_uv_vbo = 0;
-        unsafe {
-            gl::GenVertexArrays(1, &mut texture_vao);
-            gl::GenBuffers(1, &mut texture_vbo);
-            gl::GenBuffers(1, &mut texture_ebo);
-            
-            gl::BindVertexArray(texture_vao);
-            
-            gl::BindBuffer(gl::ARRAY_BUFFER, texture_vbo);
-            gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
-            gl::VertexAttribPointer(
-                0,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                std::mem::size_of::<Coordinate2D>() as i32,
-                std::ptr::null(),
-            );
-            gl::EnableVertexAttribArray(0);
-            
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, texture_ebo); 
-            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
-            
-            gl::GenBuffers(1, &mut texture_uv_vbo);
-            gl::BindBuffer(gl::ARRAY_BUFFER, texture_uv_vbo);
-            gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
-            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<Coordinate2D>() as i32, std::ptr::null());
-            gl::EnableVertexAttribArray(1);
-        }
-        
-        Self { texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, screen_width, screen_height }
+        Self { texture_shader, screen_width, screen_height }
     }
     
     pub fn blit(&self, surface: &mut Surface, pos_x: f32, pos_y: f32, width: f32, height: f32) {
-        let renderered_pos_x = -1.0 + pos_x * (2.0 / self.screen_width as f32) + (1.0 / self.screen_width as f32);
-        let renderered_pos_y = (pos_y / self.screen_height as f32 * -1.0) + 0.1;
-        let renderered_width = width / self.screen_width as f32 - 0.5;
-        let renderered_height = height / self.screen_height as f32 - 0.5;
-        #[rustfmt::skip]
-        let VERTICES: [Coordinate2D; 4] = [
-            Coordinate2D(renderered_pos_x, renderered_pos_y),
-            Coordinate2D(renderered_pos_x, renderered_pos_y + renderered_height),
-            Coordinate2D(renderered_pos_x + renderered_width, renderered_pos_y + renderered_height),
-            Coordinate2D(renderered_pos_x + renderered_width, renderered_pos_y),
+            let sw = self.screen_width as f32;
+            let sh = self.screen_height as f32;
+
+            let x1 = -1.0 + pos_x * (2.0 / sw);
+            let y1 = 1.0 - pos_y * (2.0 / sh);
+            let x0 = x1 + (width * (2.0 / sw));
+            let y0 = y1 - (height * (2.0 / sh));
+
+            let VERTICES: [Coordinate2D; 4] = [
+                Coordinate2D(x0, y0),
+                Coordinate2D(x0, y1),
+                Coordinate2D(x1, y1),
+                Coordinate2D(x1, y0),
             ];
-            
+
             #[rustfmt::skip]
             let INDICES: [u32; 6] = [
                 0, 1, 2,
