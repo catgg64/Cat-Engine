@@ -5,13 +5,16 @@ use crate::video::Renderer;
 pub mod pixel;
 pub mod video;
 pub mod math;
+pub mod input;
 
 pub struct CatEngine {
     sdl_context: sdl2::Sdl,
     window: sdl2::video::Window,
     video_subsystem: sdl2::VideoSubsystem,
     gl_context: sdl2::video::GLContext,
+    event_pump: sdl2::EventPump,
     pub renderer: Renderer,
+    pub input: input::Input,
     pub running: bool,
 }
 
@@ -35,7 +38,8 @@ impl CatEngine {
             gl::Viewport(0, 0, width as i32, height as i32);
             gl::Disable(gl::DEPTH_TEST);
         }
-        let mut renderer = Renderer::new();
+        let mut renderer = Renderer::new(width, height);
+        let mut input = input::Input::new(&sdl_context);
         let mut running: bool = true;
 
         Ok(CatEngine { 
@@ -43,13 +47,16 @@ impl CatEngine {
             window, 
             video_subsystem, 
             gl_context,
+            event_pump,
             renderer,
+            input,
             running 
         })
     }
 
-    pub fn update(&self) {
+    pub fn update(&mut self) {
         self.window.gl_swap_window();
+        self.running = self.input.update(&mut self.event_pump);
     }
 
     pub fn clear_screen(&self, color: pixel::Color) {
@@ -59,4 +66,9 @@ impl CatEngine {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
     }
+}
+
+pub mod keyboard {
+    pub use sdl2::keyboard::{Keycode, Scancode, Mod};
+    // TODO: Add helpers    
 }

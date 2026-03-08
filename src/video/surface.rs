@@ -32,7 +32,7 @@ impl Surface {
                            0,
                            gl::RGBA,
                            gl::UNSIGNED_BYTE,
-                           data.as_ptr() as *const std::os::raw::c_void);
+                           data.as_ptr() as *const _);
         }
 
         let mut corners = [
@@ -61,23 +61,30 @@ impl Surface {
         }
     }
 
-    pub fn load(&mut self, path: &str) -> Result<(), ImageError>{
+    pub fn load(&mut self) -> Result<(), ImageError>{
         unsafe {
             self.bind();
 
-            let img = image::open(path).unwrap().into_rgba8();
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
                 gl::RGBA as i32,
-                img.width() as i32,
-                img.height() as i32,
+                self.width as i32,
+                self.height as i32,
                 0,
                 gl::RGBA,
                 gl::UNSIGNED_BYTE,
-                img.into_raw().as_ptr() as *const _,
+                self.data.as_ptr() as *const _,
             );
             Ok(())
+        }
+    }
+}
+
+impl Drop for Surface {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteTextures(1, &self.texture_id);  // or whatever your texture ID is
         }
     }
 }
