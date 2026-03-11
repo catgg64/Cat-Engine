@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use glam::Mat4;
+
 use crate::video::Renderer;
 
 pub mod pixel;
@@ -67,6 +69,24 @@ impl CatEngine {
             gl::ClearColor(true_color_r as f32,true_color_g as f32,true_color_b as f32,true_color_a as f32);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
+    }
+
+    pub fn get_camera_specs(&self, cam_x: f32, cam_y: f32, cam_z: f32, yaw: f32, pitch: f32) -> (f32, f32, f32, f32, f32, f32, Mat4) {
+        let (camera_position_x, camera_position_y, camera_position_z) = (cam_x, cam_y, cam_z);
+
+        let (front_x, front_y, front_z) = (
+            yaw.cos() * pitch.cos(),
+            pitch.sin(),
+            -yaw.sin() * pitch.cos()
+        );
+
+        let view_matrix = Mat4::look_at_rh(
+            glam::Vec3 { x: camera_position_x, y: camera_position_y, z: camera_position_z },
+            glam::Vec3 { x: camera_position_x, y: camera_position_y, z: camera_position_z } + glam::Vec3 { x: front_x, y: front_y, z: front_z },
+            glam::Vec3::Y,
+        );
+
+        (camera_position_x, camera_position_y, camera_position_z, front_x, front_y, front_z, view_matrix)
     }
 }
 
