@@ -3,7 +3,8 @@ use std::ffi::CString;
 use glam::Mat4;
 
 use crate::video::surface::Surface;
-use crate::math::{ Coordinate2D };
+use crate::math::{ Coordinate2D, Coordinate3D };
+use crate::mesh::{ Mesh, MeshVertex };
 
 pub mod surface;
 
@@ -142,6 +143,61 @@ pub fn start_test_element_array() -> (u32, u32, u32, u32) {
         gl::EnableVertexAttribArray(1);
     }
     (test_vao, test_vbo, test_ebo, color_vbo)
+}
+
+pub fn start_uv_3d_elemnt_array() -> (u32, u32, u32, u32) {
+    let mut vao = 0;
+    let mut vbo = 0;
+    let mut ebo = 0;
+    let mut uv_vbo = 0;
+
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+        
+        gl::BindVertexArray(vao);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            std::mem::size_of::<crate::math::Coordinate3D>() as i32,
+            std::ptr::null(),
+        );
+        gl::EnableVertexAttribArray(0);
+        
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo); 
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+        
+        gl::GenBuffers(1, &mut uv_vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<crate::math::Coordinate2D>() as i32, std::ptr::null());
+        gl::EnableVertexAttribArray(1);
+    }
+    (vao, vbo, ebo, uv_vbo)
+}
+
+pub fn update_uv_3d_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, &mut uv_vbo: &mut u32, vertices: Vec<Coordinate3D>, uvs: Vec<Coordinate2D>, indicies: Vec<u32>) {
+    unsafe {
+        gl::BindVertexArray(vao);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        let (_, vertex_bytes, _) = vertices.align_to::<u8>();
+        gl::BufferData(gl::ARRAY_BUFFER, vertex_bytes.len() as isize, vertex_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
+        let (_, uv_bytes, _) = uvs.align_to::<u8>();
+        gl::BufferData(gl::ARRAY_BUFFER, uv_bytes.len() as isize, uv_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+        
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        let (_, indices_bytes, _) = indicies.align_to::<u8>();
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, indices_bytes.len() as isize, indices_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+    }
 }
 
 pub struct Shader {
@@ -436,9 +492,63 @@ impl Renderer {
         }
     }
 
-//    pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: Mesh) {
-//
-//    }
+    pub fn draw_3d_triangle(&mut self, p1: Coordinate3D, p2: Coordinate3D, p3: Coordinate3D, surface: &mut Surface, uvs: Vec<Coordinate2D>, view: Mat4) {
+        let model = Mat4::from_scale_rotation_translation(
+        glam::Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
+        glam::Quat::IDENTITY,
+        glam::Vec3::new(0.0, 0.0, 0.0),
+        );
+        let mut vertices: Vec<Coordinate3D> = Vec::new();
+        vertices.push(p1);
+        vertices.push(p2);
+        vertices.push(p3);
+        #[rustfmt::skip]
+        let indicies: Vec<u32> = vec![
+            0, 1, 2,
+        ];
+
+        self.triangle3d_shader.bind();
+        self.triangle3d_shader.set_mat4("model", model.to_cols_array());
+        self.triangle3d_shader.set_mat4("view", view.to_cols_array());
+        self.triangle3d_shader.set_mat4("projection", self.projection.to_cols_array());
+
+
+
+        update_uv_3d_element_array(&mut self.triangle_vao, &mut self.triangle_vbo, &mut self.triangle_ebo, &mut self.triangle_uv_vbo, vertices, uvs, indicies);
+        
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.triangle3d_shader.bind();
+            self.triangle3d_shader.set_int("tex", 0);
+            gl::BindVertexArray(self.triangle3d_vao);
+            surface.bind();
+            gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
+        }
+    }
+
+    // pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: Mesh, view: &Mat4) {
+    //     let model = Mat4::from_scale_rotation_translation(
+    //         glam::Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
+    //         glam::Quat::IDENTITY,
+    //         glam::Vec3::new(0.0 + pos_x, 0.0 + pos_y, 0.0 + pos_z),
+    //     );
+
+    //     self.triangle3d_shader.bind();
+    //     self.triangle3d_shader.set_mat4("model", model.to_cols_array());
+    //     self.triangle3d_shader.set_mat4("view", view.to_cols_array());
+    //     self.triangle3d_shader.set_mat4("projection", self.projection.to_cols_array());
+
+
+    //     unsafe {
+    //         gl::ActiveTexture(gl::TEXTURE0);
+    //         mesh.texture.bind();
+    //         self.triangle3d_shader.set_int("tex", 0);
+
+    //         gl::BindVertexArray(self.triangle3d_vao);
+    //         gl::DrawElements(gl::TRIANGLES, len(mesh.), gl::UNSIGNED_INT, std::ptr::null());
+    //         gl::BindVertexArray(0);
+    //     }
+    // }
 }
 
 

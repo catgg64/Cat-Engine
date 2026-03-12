@@ -8,6 +8,7 @@ pub mod pixel;
 pub mod video;
 pub mod math;
 pub mod input;
+pub mod mesh;
 
 pub struct CatEngine {
     sdl_context: sdl2::Sdl,

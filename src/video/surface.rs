@@ -1,5 +1,3 @@
-use image::ImageError;
-
 use crate::{math::Coordinate2D};
 
 pub struct Surface {

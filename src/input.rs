@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use sdl2::rect::Point;
 use sdl2::{ Sdl, event::Event, keyboard::Scancode };
 use std::ops::Index;
 use sdl2::mouse::MouseUtil;
