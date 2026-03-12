@@ -1,11 +1,13 @@
 use std::ffi::CString;
 
+use glam::Mat4;
+
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D };
 
 pub mod surface;
 
-pub fn start_elemnt_array() -> (u32, u32, u32, u32) {
+pub fn start_uv_elemnt_array() -> (u32, u32, u32, u32) {
     let mut vao = 0;
     let mut vbo = 0;
     let mut ebo = 0;
@@ -42,7 +44,39 @@ pub fn start_elemnt_array() -> (u32, u32, u32, u32) {
     (vao, vbo, ebo, uv_vbo)
 }
 
-pub fn update_elemnt_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, &mut uv_vbo: &mut u32, vertices: Vec<Coordinate2D>, uvs: Vec<Coordinate2D>, indicies: Vec<u32>) {
+pub fn start_element_array() -> (u32, u32, u32) {
+    let mut vao = 0;
+    let mut vbo = 0;
+    let mut ebo = 0;
+
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+        
+        gl::BindVertexArray(vao);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            std::mem::size_of::<crate::math::Coordinate2D>() as i32,
+            std::ptr::null(),
+        );
+        gl::EnableVertexAttribArray(0);
+        
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo); 
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+        
+        gl::EnableVertexAttribArray(1);
+    }
+    (vao, vbo, ebo)
+}
+
+pub fn update_uv_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, &mut uv_vbo: &mut u32, vertices: Vec<Coordinate2D>, uvs: Vec<Coordinate2D>, indicies: Vec<u32>) {
     unsafe {
         gl::BindVertexArray(vao);
         
@@ -58,6 +92,56 @@ pub fn update_elemnt_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mu
         let (_, indices_bytes, _) = indicies.align_to::<u8>();
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, indices_bytes.len() as isize, indices_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
     }
+}
+
+pub fn update_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, vertices: Vec<Coordinate2D>, indicies: Vec<u32>) {
+    unsafe {
+        gl::BindVertexArray(vao);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        let (_, vertex_bytes, _) = vertices.align_to::<u8>();
+        gl::BufferData(gl::ARRAY_BUFFER, vertex_bytes.len() as isize, vertex_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+        
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        let (_, indices_bytes, _) = indicies.align_to::<u8>();
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, indices_bytes.len() as isize, indices_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+    }
+}
+
+pub fn start_test_element_array() -> (u32, u32, u32, u32) {
+    let mut test_vao = 0;
+    let mut test_vbo = 0;
+    let mut test_ebo = 0;
+    let mut color_vbo = 0;
+    unsafe {
+        gl::GenVertexArrays(1, &mut test_vao);
+        gl::GenBuffers(1, &mut test_vbo);
+        gl::GenBuffers(1, &mut test_ebo);
+        gl::GenBuffers(1, &mut color_vbo);
+        
+        gl::BindVertexArray(test_vao);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, test_vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            2 * std::mem::size_of::<f32>() as i32, std::ptr::null(),
+        );
+        gl::EnableVertexAttribArray(0);
+        
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, test_ebo); 
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+        
+        gl::BindBuffer(gl::ARRAY_BUFFER, color_vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE,
+            (3 * std::mem::size_of::<f32>()) as i32, std::ptr::null());
+        gl::EnableVertexAttribArray(1);
+    }
+    (test_vao, test_vbo, test_ebo, color_vbo)
 }
 
 pub struct Shader {
@@ -189,6 +273,13 @@ impl Shader {
         }
     }
 
+    pub fn get_attrib_location(&self, attrib: &str) -> Result<i32, ()> {
+        unsafe {
+            let attrib = CString::new(attrib).unwrap();
+            Ok(gl::GetAttribLocation(self.program_id, attrib.as_ptr()) as i32)
+        }
+    }
+
 }
 
 
@@ -201,6 +292,7 @@ impl Drop for Shader {
 }
 
 pub struct Renderer {
+    pub projection: glam::Mat4,
     texture_shader: Shader,
     texture_vao: u32,
     texture_vbo: u32,
@@ -211,20 +303,39 @@ pub struct Renderer {
     triangle_vbo: u32,
     triangle_ebo: u32,
     triangle_uv_vbo: u32,
+    test_shader: Shader,
+    test_vao: u32,
+    test_vbo: u32,
+    test_ebo: u32,
+    test_color_vbo: u32,
+    triangle3d_shader: Shader,
+    triangle3d_vao: u32,
+    triangle3d_vbo: u32,
+    triangle3d_ebo: u32,
+    triangle3d_uv_vbo: u32,
     screen_width: u32,
     screen_height: u32,
 }
 
 impl Renderer {
-    pub fn new(screen_width: u32, screen_height: u32) -> Self {
+    pub fn new(screen_width: u32, screen_height: u32, fov: f32, near_plane: f32, far_plane: f32) -> Self {
         let texture_shader = Shader::new("texture.vert", "texture.frag");
         let triangle_shader = Shader::new("triangle.vert", "triangle.frag");
-        let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_elemnt_array();
-        let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_elemnt_array();
+        let triangle3d_shader = Shader::new("triangle3d.vert", "triangle3d.frag");
+        let test_shader = Shader::new("opengltest.vert", "opengltest.frag");
+        let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
+        let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
+        let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
+        let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_elemnt_array();
+        let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
 
-        Self { texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, screen_width, screen_height }
+        Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height }
     }
     
+    pub fn set_projection(&mut self, projection: Mat4) {
+        self.projection = projection;
+    }
+
     pub fn blit(&mut self, surface: &mut Surface, pos_x: f32, pos_y: f32) {
         let sw = self.screen_width as f32;
         let sh: f32 = self.screen_height as f32;
@@ -246,7 +357,7 @@ impl Renderer {
             2, 3, 0
         ];
         
-        update_elemnt_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, surface.corners.to_vec(), indicies);
+        update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, surface.corners.to_vec(), indicies);
         
         unsafe {
             self.texture_shader.bind();
@@ -258,7 +369,7 @@ impl Renderer {
         }
     }
 
-    pub fn draw_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D, uvs: Vec<Coordinate2D>, surface: &mut Surface) {
+    pub fn draw_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D,  surface: &mut Surface, uvs: Vec<Coordinate2D>) {
         let mut vertices: Vec<Coordinate2D> = Vec::new();
         vertices.push(p1.return_into_gl_coordinates(self.screen_width, self.screen_height));
         vertices.push(p2.return_into_gl_coordinates(self.screen_width, self.screen_height));
@@ -269,7 +380,7 @@ impl Renderer {
             0, 1, 2,
         ];
 
-        update_elemnt_array(&mut self.triangle_vao, &mut self.triangle_vbo, &mut self.triangle_ebo, &mut self.triangle_uv_vbo, vertices, uvs, indicies);
+        update_uv_element_array(&mut self.triangle_vao, &mut self.triangle_vbo, &mut self.triangle_ebo, &mut self.triangle_uv_vbo, vertices, uvs, indicies);
         
         unsafe {
             self.triangle_shader.bind();
@@ -280,7 +391,56 @@ impl Renderer {
             gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
         }
     }
+
+    pub fn draw_test_opengl_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D) {
+        let mut vertices: Vec<Coordinate2D> = Vec::new();
+        vertices.push(p1.return_into_gl_coordinates(self.screen_width, self.screen_height));
+        vertices.push(p2.return_into_gl_coordinates(self.screen_width, self.screen_height));
+        vertices.push(p3.return_into_gl_coordinates(self.screen_width, self.screen_height));
+
+        #[rustfmt::skip]
+        let indicies: Vec<u32> = vec![
+            0, 1, 2,
+        ];
+
+        let data: Vec<f32> = vec![
+            // position      // color
+            vertices[0].0, vertices[0].1,  1.0, 0.0, 0.0,
+            vertices[1].0, vertices[1].1,  0.0, 1.0, 0.0,
+            vertices[2].0, vertices[2].1,  0.0, 0.0, 1.0,
+        ];
+        
+        unsafe {
+
+            let stride = (5 * std::mem::size_of::<f32>()) as i32;
+
+            gl::BindVertexArray(self.test_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.test_vbo);
+            gl::BufferData(gl::ARRAY_BUFFER, (data.len() * std::mem::size_of::<f32>()) as isize, data.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+
+            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
+            gl::EnableVertexAttribArray(0);
+
+            gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, stride, (2 * std::mem::size_of::<f32>()) as *const _);
+            gl::EnableVertexAttribArray(1);
+
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.test_ebo);
+            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indicies.len() * std::mem::size_of::<u32>()) as isize, indicies.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+        }
+
+        
+        unsafe {
+            self.test_shader.bind();
+            gl::BindVertexArray(self.test_vao);
+            gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
+        }
+    }
+
+//    pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: Mesh) {
+//
+//    }
 }
+
 
 impl Drop for Renderer {
     fn drop(&mut self) {
@@ -292,3 +452,4 @@ impl Drop for Renderer {
         }
     }
 }
+

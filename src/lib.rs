@@ -18,6 +18,8 @@ pub struct CatEngine {
     pub renderer: Renderer,
     pub input: input::Input,
     pub running: bool,
+    pub screen_width: u32,
+    pub screen_height: u32,
 }
 
 impl CatEngine {
@@ -42,7 +44,7 @@ impl CatEngine {
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
-        let mut renderer = Renderer::new(width, height);
+        let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
         let mut input = input::Input::new(&sdl_context);
         let mut running: bool = true;
 
@@ -54,7 +56,9 @@ impl CatEngine {
             event_pump,
             renderer,
             input,
-            running 
+            running,
+            screen_width: width,
+            screen_height: height,
         })
     }
 
@@ -87,6 +91,11 @@ impl CatEngine {
         );
 
         (camera_position_x, camera_position_y, camera_position_z, front_x, front_y, front_z, view_matrix)
+    }
+
+    pub fn set_fov(&mut self, fov: f32, near_plane: f32, far_plane: f32) {
+        let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), self.screen_width as f32 / self.screen_height as f32, near_plane, far_plane);
+        self.renderer.set_projection(projection);
     }
 }
 
