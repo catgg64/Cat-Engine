@@ -23,7 +23,7 @@ impl Clone for Coordinate2D {
     }
 }
 
-pub struct Coordinate3D(pub f64, pub f64, pub f64);
+pub struct Coordinate3D(pub f32, pub f32, pub f32);
 
 pub fn pixels_to_gl_coordinates(pos_x: f32, pos_y: f32, screen_width: u32, screen_height: u32) -> (f32, f32) {
     let sw = screen_width as f32;

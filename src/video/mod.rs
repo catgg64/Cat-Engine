@@ -382,7 +382,7 @@ impl Renderer {
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
         let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
-        let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_elemnt_array();
+        let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array();
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
 
         Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height }
@@ -496,7 +496,7 @@ impl Renderer {
         let model = Mat4::from_scale_rotation_translation(
         glam::Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
         glam::Quat::IDENTITY,
-        glam::Vec3::new(0.0, 0.0, 0.0),
+        glam::Vec3::new(0.0, 0.0, -5.0),
         );
         let mut vertices: Vec<Coordinate3D> = Vec::new();
         vertices.push(p1);
@@ -514,7 +514,7 @@ impl Renderer {
 
 
 
-        update_uv_3d_element_array(&mut self.triangle_vao, &mut self.triangle_vbo, &mut self.triangle_ebo, &mut self.triangle_uv_vbo, vertices, uvs, indicies);
+        update_uv_3d_element_array(&mut self.triangle3d_vao, &mut self.triangle3d_vbo, &mut self.triangle3d_ebo, &mut self.triangle3d_uv_vbo, vertices, uvs, indicies);
         
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
