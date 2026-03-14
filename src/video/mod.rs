@@ -145,7 +145,7 @@ pub fn start_test_element_array() -> (u32, u32, u32, u32) {
     (test_vao, test_vbo, test_ebo, color_vbo)
 }
 
-pub fn start_uv_3d_elemnt_array() -> (u32, u32, u32, u32) {
+pub fn start_uv_3d_elemnt_array(position_lenght: i32, uv_lenght: i32) -> (u32, u32, u32, u32) {
     let mut vao = 0;
     let mut vbo = 0;
     let mut ebo = 0;
@@ -162,7 +162,7 @@ pub fn start_uv_3d_elemnt_array() -> (u32, u32, u32, u32) {
         gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(),  gl::DYNAMIC_DRAW);
         gl::VertexAttribPointer(
             0,
-            3,
+            position_lenght,
             gl::FLOAT,
             gl::FALSE,
             std::mem::size_of::<crate::math::Coordinate3D>() as i32,
@@ -176,13 +176,13 @@ pub fn start_uv_3d_elemnt_array() -> (u32, u32, u32, u32) {
         gl::GenBuffers(1, &mut uv_vbo);
         gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
         gl::BufferData(gl::ARRAY_BUFFER, 0, std::ptr::null(), gl::DYNAMIC_DRAW);
-        gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<crate::math::Coordinate2D>() as i32, std::ptr::null());
+        gl::VertexAttribPointer(1, uv_lenght, gl::FLOAT, gl::FALSE, std::mem::size_of::<crate::math::Coordinate2D>() as i32, std::ptr::null());
         gl::EnableVertexAttribArray(1);
     }
     (vao, vbo, ebo, uv_vbo)
 }
 
-pub fn update_uv_3d_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, &mut uv_vbo: &mut u32, vertices: Vec<Coordinate3D>, uvs: Vec<Coordinate2D>, indicies: Vec<u32>) {
+pub fn update_uv_3d_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo: &mut u32, &mut uv_vbo: &mut u32, vertices: Vec<Coordinate3D>, uvs: Vec<Coordinate2D>, indicies: &Vec<u32>) {
     unsafe {
         gl::BindVertexArray(vao);
         
@@ -382,7 +382,7 @@ impl Renderer {
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
         let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
-        let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array();
+        let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array(3, 2);
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
 
         Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height }
@@ -514,7 +514,7 @@ impl Renderer {
 
 
 
-        update_uv_3d_element_array(&mut self.triangle3d_vao, &mut self.triangle3d_vbo, &mut self.triangle3d_ebo, &mut self.triangle3d_uv_vbo, vertices, uvs, indicies);
+        update_uv_3d_element_array(&mut self.triangle3d_vao, &mut self.triangle3d_vbo, &mut self.triangle3d_ebo, &mut self.triangle3d_uv_vbo, vertices, uvs, &indicies);
         
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
@@ -526,29 +526,29 @@ impl Renderer {
         }
     }
 
-    // pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: Mesh, view: &Mat4) {
-    //     let model = Mat4::from_scale_rotation_translation(
-    //         glam::Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
-    //         glam::Quat::IDENTITY,
-    //         glam::Vec3::new(0.0 + pos_x, 0.0 + pos_y, 0.0 + pos_z),
-    //     );
+    pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: &mut Mesh, view: &Mat4) {
+        let model = Mat4::from_scale_rotation_translation(
+            glam::Vec3::new(5.0, 5.0, 5.0),
+            glam::Quat::IDENTITY,
+            glam::Vec3::new(0.0 + pos_x, 0.0 + pos_y, 0.0 + pos_z),
+        );
 
-    //     self.triangle3d_shader.bind();
-    //     self.triangle3d_shader.set_mat4("model", model.to_cols_array());
-    //     self.triangle3d_shader.set_mat4("view", view.to_cols_array());
-    //     self.triangle3d_shader.set_mat4("projection", self.projection.to_cols_array());
+        self.triangle3d_shader.bind();
+        self.triangle3d_shader.set_mat4("model", model.to_cols_array());
+        self.triangle3d_shader.set_mat4("view", view.to_cols_array());
+        self.triangle3d_shader.set_mat4("projection", self.projection.to_cols_array());
 
 
-    //     unsafe {
-    //         gl::ActiveTexture(gl::TEXTURE0);
-    //         mesh.texture.bind();
-    //         self.triangle3d_shader.set_int("tex", 0);
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            mesh.texture.bind();
+            self.triangle3d_shader.set_int("tex", 0);
 
-    //         gl::BindVertexArray(self.triangle3d_vao);
-    //         gl::DrawElements(gl::TRIANGLES, len(mesh.), gl::UNSIGNED_INT, std::ptr::null());
-    //         gl::BindVertexArray(0);
-    //     }
-    // }
+            gl::BindVertexArray(mesh.vao);
+            gl::DrawElements(gl::TRIANGLES, mesh.indicies.len() as i32, gl::UNSIGNED_INT, std::ptr::null());
+            gl::BindVertexArray(0);
+        }
+ }
 }
 
 
