@@ -189,11 +189,13 @@ pub fn update_uv_3d_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut e
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         let (_, vertex_bytes, _) = vertices.align_to::<u8>();
         gl::BufferData(gl::ARRAY_BUFFER, vertex_bytes.len() as isize, vertex_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
-        
+        gl::EnableVertexAttribArray(0);
+
         gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
         let (_, uv_bytes, _) = uvs.align_to::<u8>();
         gl::BufferData(gl::ARRAY_BUFFER, uv_bytes.len() as isize, uv_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
-        
+        gl::EnableVertexAttribArray(1);
+
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         let (_, indices_bytes, _) = indicies.align_to::<u8>();
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, indices_bytes.len() as isize, indices_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);

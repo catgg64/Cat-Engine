@@ -43,6 +43,7 @@ impl CatEngine {
             gl::Viewport(0, 0, width as i32, height as i32);
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::BLEND);
+            gl::Disable(gl::CULL_FACE);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
         let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
