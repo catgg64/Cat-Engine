@@ -1,6 +1,5 @@
-use std::{fs::File, io::{BufRead, BufReader}, time, vec};
+use std::{fs::File, io::{BufRead, BufReader}};
 
-use crate::{math::{Coordinate2D, Coordinate3D}, video::update_uv_3d_element_array};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -24,7 +23,7 @@ pub struct Mesh {
     pub ebo: u32,
     pub indicies: Vec<u32>,
     pub texture: super::video::surface::Surface,
-    animations: HashMap<String, Animation>,
+    animations: HashMap<String, ProssesedAnimation>,
     current_animation: Option<String>,
 }
 
@@ -67,7 +66,7 @@ impl Mesh {
         Self { vao, vbo, ebo, indicies: objdata.indices, texture: surface, animations: HashMap::new(), current_animation: None }
     }
 
-    pub fn new_from_texture_file(objdata: ObjData, indicies: Vec<u32>, texture: &str) -> Self {
+    pub fn new_from_texture_file(objdata: ObjData, texture: &str) -> Self {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -107,20 +106,20 @@ impl Mesh {
     }
 
     pub fn append_animation(&mut self, animation: Animation, name: String) {
-        self.animations.insert(name, animation);
+        self.animations.insert(name, ProssesedAnimation::new(animation.animation_objects));
     }
 
     pub fn play_animation(&mut self, animation_name: String) {
         self.current_animation = Some(animation_name)      
     }
 
-    pub fn update_animations(&mut self, time: time::SystemTime) {
+    pub fn update_animations(&mut self) {
         match self.current_animation {
             None => {},
             Some(_) => {
                 let used_animation = self.animations.get(&self.current_animation.clone().unwrap());
 
-                
+                println!("{:#?}", used_animation.unwrap());
             },
         }
     }
@@ -212,39 +211,49 @@ impl ObjData {
 }
 
 pub struct Animation {
-    animation_objects: HashMap<u32, MeshVertex>,
+    animation_objects: HashMap<u32, (MeshVertex, u64)>, // Indice -> Vertex + Time
 }
 
 impl Animation {
-    pub fn new(animation_objects: HashMap<u32, MeshVertex>) -> Self {
+    pub fn new(animation_objects: HashMap<u32, (MeshVertex, u64)>) -> Self {
         Self { animation_objects }
     }
 }
 
+#[derive(std::fmt::Debug)]
 pub struct ProssesedAnimation {
-    animation_objects: HashMap<u32, MeshVertex>,
+    animation_objects: HashMap<u32, HashMap<String, u32>>,
 }
 
 impl ProssesedAnimation {
-    pub fn new(animation_objects: HashMap<u32, MeshVertex>) -> Self {
+    pub fn new(animation_objects: HashMap<u32, (MeshVertex, u64)>) -> Self {
         // This is quite complicated so let me explain it here:
         // The processed_animation is a HashMap. This HashMap contais the value for each individual indices, being the "threads".
         // If an has no HashMap attached to it, it creates a new one and stores itself. If it has, then it just adds it's value to it.
 
-        let mut processed_animation: HashMap<String, HashMap<MeshVertex, (u32, u64)>> = HashMap::new(); // The String value is just for identifing the Vertex, it doesn't actually have any effect.
-        
-        
+        let mut processed_animation: HashMap<u32, HashMap<String, u32>> = HashMap::new(); // The String value is just for identifing the Vertex, it doesn't actually have any effect.
+
+        // HashMap (the threads) that contains a hash map (thread) that contains the new mesh value and it's time.
+
         for keyframe in animation_objects.iter() {
-            match processed_animation.contains_key(&format!("{} {} {} {} {}", keyframe.1.x, keyframe.1.y, keyframe.1.z, keyframe.1.u, keyframe.1.v)) {
-                false => {
-                    processed_animation.insert(String::from(format!("{} {} {} {} {}", keyframe.1.x, keyframe.1.y, keyframe.1.z, keyframe.1.u, keyframe.1.v)), keyframe.0.to_owned());
+            match processed_animation.get(keyframe.0) {
+                None => {
+                    processed_animation.insert(keyframe.0.to_owned(), HashMap::new());
+                    processed_animation.get_mut(keyframe.0).unwrap().insert(
+                        format!("{} {} {} {} {}", 
+                        keyframe.1.0.x, keyframe.1.0.y, keyframe.1.0.z, keyframe.1.0.u, keyframe.1.0.v), 
+                        keyframe.0.to_owned()); // They need to be Strings because of sum rust shi
                 }
-                true => {
-                    processed_animation.get(&format!("{} {} {} {} {}", keyframe.1.x, keyframe.1.y, keyframe.1.z, keyframe.1.u, keyframe.1.v)).unwrap().insert();
+                Some(v) => {
+                    v.to_owned().insert(
+                        format!("{} {} {} {} {}", 
+                        keyframe.1.0.x, keyframe.1.0.y, keyframe.1.0.z, keyframe.1.0.u, keyframe.1.0.v), 
+                        keyframe.0.to_owned());
                 }
             }
+            
         }
 
-        Self { animation_objects }
+        Self { animation_objects: processed_animation }
     }
 }

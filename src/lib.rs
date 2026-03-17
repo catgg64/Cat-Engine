@@ -99,6 +99,18 @@ impl CatEngine {
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), self.screen_width as f32 / self.screen_height as f32, near_plane, far_plane);
         self.renderer.set_projection(projection);
     }
+
+    pub fn enable_fullscreen(&mut self) {
+        self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop);
+    }
+
+    pub fn enable_true_fullscreen(&mut self) {
+        self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop);
+    }
+
+    pub fn disable_fullscreen(&mut self) {
+        self.window.set_fullscreen(sdl2::video::FullscreenType::Off);
+    }
 }
 
 pub mod keyboard {
