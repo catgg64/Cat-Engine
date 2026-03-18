@@ -211,44 +211,47 @@ impl ObjData {
 }
 
 pub struct Animation {
-    animation_objects: HashMap<u32, (MeshVertex, u64)>, // Indice -> Vertex + Time
+    animation_objects: Vec<(u32, MeshVertex, u64)>, // Indice -> Vertex + Time
 }
 
 impl Animation {
-    pub fn new(animation_objects: HashMap<u32, (MeshVertex, u64)>) -> Self {
+    pub fn new(animation_objects: Vec<(u32, MeshVertex, u64)>) -> Self {
         Self { animation_objects }
     }
 }
 
 #[derive(std::fmt::Debug)]
 pub struct ProssesedAnimation {
-    animation_objects: HashMap<u32, HashMap<String, u32>>,
+    animation_objects: HashMap<u32, Vec<(String, u32)>>,
 }
 
 impl ProssesedAnimation {
-    pub fn new(animation_objects: HashMap<u32, (MeshVertex, u64)>) -> Self {
+    pub fn new(animation_objects: Vec<(u32, MeshVertex, u64)>) -> Self {
         // This is quite complicated so let me explain it here:
         // The processed_animation is a HashMap. This HashMap contais the value for each individual indices, being the "threads".
         // If an has no HashMap attached to it, it creates a new one and stores itself. If it has, then it just adds it's value to it.
 
-        let mut processed_animation: HashMap<u32, HashMap<String, u32>> = HashMap::new(); // The String value is just for identifing the Vertex, it doesn't actually have any effect.
+        let mut processed_animation: HashMap<u32, Vec<(String, u32)>> = HashMap::new(); // The String value is just for identifing the Vertex, it doesn't actually have any effect.
 
         // HashMap (the threads) that contains a hash map (thread) that contains the new mesh value and it's time.
 
         for keyframe in animation_objects.iter() {
-            match processed_animation.get(keyframe.0) {
+            println!("processing value {:#?}...", keyframe); 
+            match processed_animation.get(&keyframe.0) {
                 None => {
-                    processed_animation.insert(keyframe.0.to_owned(), HashMap::new());
-                    processed_animation.get_mut(keyframe.0).unwrap().insert(
+                    println!("no value indexed as {:#?}, creating a new one.", keyframe.0);
+                    processed_animation.insert(keyframe.0.to_owned(), vec![]);
+                    processed_animation.get_mut(&keyframe.0).unwrap().push((
                         format!("{} {} {} {} {}", 
-                        keyframe.1.0.x, keyframe.1.0.y, keyframe.1.0.z, keyframe.1.0.u, keyframe.1.0.v), 
-                        keyframe.0.to_owned()); // They need to be Strings because of sum rust shi
+                        keyframe.1.x, keyframe.1.y, keyframe.1.z, keyframe.1.u, keyframe.1.v), 
+                        keyframe.0.to_owned())); // They need to be Strings because of sum rust shi
                 }
                 Some(v) => {
-                    v.to_owned().insert(
+                    println!("pushing value: {:#?}, since there is already {}", v, keyframe.0);
+                    v.to_owned().push((
                         format!("{} {} {} {} {}", 
-                        keyframe.1.0.x, keyframe.1.0.y, keyframe.1.0.z, keyframe.1.0.u, keyframe.1.0.v), 
-                        keyframe.0.to_owned());
+                        keyframe.1.x, keyframe.1.y, keyframe.1.z, keyframe.1.u, keyframe.1.v), 
+                        keyframe.0.to_owned()));
                 }
             }
             

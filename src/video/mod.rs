@@ -373,6 +373,9 @@ pub struct Renderer {
     triangle3d_uv_vbo: u32,
     screen_width: u32,
     screen_height: u32,
+    pub fov: f32,
+    pub near_plane: f32,
+    pub far_plane: f32,
 }
 
 impl Renderer {
@@ -387,10 +390,17 @@ impl Renderer {
         let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array(3, 2);
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
 
-        Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height }
+        Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
     }
     
-    pub fn set_projection(&mut self, projection: Mat4) {
+    pub fn set_projection(&mut self, projection: Mat4, fov: f32, near_plane: f32, far_plane: f32) {
+        self.projection = projection;
+        self.fov = fov;
+        self.near_plane = near_plane;
+        self.far_plane = far_plane;
+    }
+
+    pub fn true_set_projection(&mut self, projection: Mat4) {
         self.projection = projection;
     }
 
@@ -550,7 +560,7 @@ impl Renderer {
             gl::DrawElements(gl::TRIANGLES, mesh.indicies.len() as i32, gl::UNSIGNED_INT, std::ptr::null());
             gl::BindVertexArray(0);
         }
- }
+    }
 }
 
 

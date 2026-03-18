@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use glam::Mat4;
+use sdl2::sys::SDL_GetWindowSize;
 
 use crate::video::Renderer;
 
@@ -97,15 +98,29 @@ impl CatEngine {
 
     pub fn set_fov(&mut self, fov: f32, near_plane: f32, far_plane: f32) {
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), self.screen_width as f32 / self.screen_height as f32, near_plane, far_plane);
-        self.renderer.set_projection(projection);
+        self.renderer.set_projection(projection, fov, near_plane, far_plane);
     }
 
     pub fn enable_fullscreen(&mut self) {
         self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop);
+        let display_mode = self.video_subsystem.current_display_mode(0).unwrap();
+
+        let width = display_mode.w;
+        let height = display_mode.h;
+
+        self.screen_width = width as u32;
+        self.screen_height = height as u32;
+
+
+        unsafe {
+            gl::Viewport(0, 0, width, height);
+        }
+        let projection = glam::Mat4::perspective_rh_gl(self.renderer.fov.to_radians(), self.screen_width as f32 / self.screen_height as f32, self.renderer.near_plane, self.renderer.far_plane);
+        self.renderer.true_set_projection(projection);
     }
 
     pub fn enable_true_fullscreen(&mut self) {
-        self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop);
+        self.window.set_fullscreen(sdl2::video::FullscreenType::True);
     }
 
     pub fn disable_fullscreen(&mut self) {
