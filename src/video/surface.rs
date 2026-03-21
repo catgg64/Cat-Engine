@@ -57,7 +57,9 @@ impl Surface {
             Coordinate2D((x + width) as f32 / self.width as f32, y as f32 / self.height as f32),
             Coordinate2D(x as f32 / self.width as f32,           y as f32 / self.height as f32),
             Coordinate2D(x as f32 / self.width as f32,           (y + height) as f32 / self.height as f32),
-        ]
+        ];
+        self.width = width;
+        self.height = height;
     }
 
     pub fn stretch(&mut self, width: u32, height: u32) {

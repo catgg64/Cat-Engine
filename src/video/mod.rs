@@ -4,7 +4,7 @@ use glam::Mat4;
 
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D };
-use crate::mesh::{ Mesh, MeshVertex };
+use crate::mesh::{ Mesh };
 
 pub mod surface;
 

@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use glam::Mat4;
-use sdl2::sys::SDL_GetWindowSize;
 
 use crate::video::Renderer;
 
@@ -31,6 +30,7 @@ impl CatEngine {
 
         let window = video_subsystem
             .window(title, width, height)
+            .resizable()
             .position_centered()
             .opengl()
             .build()
@@ -67,7 +67,7 @@ impl CatEngine {
 
     pub fn update(&mut self) {
         self.window.gl_swap_window();
-        self.running = self.input.update(&mut self.event_pump);
+        self.running = self.input.update(&mut self.event_pump, &mut self.renderer);
     }
 
     pub fn clear_screen(&self, color: pixel::Color) {
@@ -102,7 +102,7 @@ impl CatEngine {
     }
 
     pub fn enable_fullscreen(&mut self) {
-        self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop);
+        self.window.set_fullscreen(sdl2::video::FullscreenType::Desktop).unwrap();
         let display_mode = self.video_subsystem.current_display_mode(0).unwrap();
 
         let width = display_mode.w;
@@ -120,11 +120,11 @@ impl CatEngine {
     }
 
     pub fn enable_true_fullscreen(&mut self) {
-        self.window.set_fullscreen(sdl2::video::FullscreenType::True);
+        self.window.set_fullscreen(sdl2::video::FullscreenType::True).unwrap();
     }
 
     pub fn disable_fullscreen(&mut self) {
-        self.window.set_fullscreen(sdl2::video::FullscreenType::Off);
+        self.window.set_fullscreen(sdl2::video::FullscreenType::Off).unwrap();
     }
 }
 

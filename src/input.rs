@@ -5,6 +5,7 @@ use sdl2::mouse::MouseUtil;
 use sdl2::video::Window;
 
 use crate::math;
+use crate::video::Renderer;
 
 pub struct Input {
     pressed: HashSet<Scancode>,
@@ -75,7 +76,7 @@ impl Input {
         // Optional: clamp pitch so camera doesn’t flip
         *pitch = pitch.clamp(-1.570, 1.570); // ±89 degrees in radians
     }
-    pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
+    pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
         for event in event_pump.poll_iter() {
@@ -92,7 +93,21 @@ impl Input {
                 Event::MouseMotion { xrel, yrel, .. } => {
                     self.mouse_delta = (xrel, yrel);
                 },
-                _ => {},
+                sdl2::event::Event::Window { win_event, .. } => {
+                    match win_event {
+                        sdl2::event::WindowEvent::Resized(w, h) |
+                        sdl2::event::WindowEvent::SizeChanged(w, h) => {
+                            unsafe {
+                                gl::Viewport(0, 0, w, h);
+                            }
+                            let projection = glam::Mat4::perspective_rh_gl(renderer.fov.to_radians(), w as f32 / h as f32, renderer.near_plane, renderer.far_plane);
+                            renderer.true_set_projection(projection);
+                        }
+                        _ => {}
+
+                    }
+                }
+            _ => {},
             }
         }
         running
