@@ -447,46 +447,29 @@ impl Renderer {
 
     pub fn draw_tileset(&mut self, tile: u32, tile_set: &mut surface::TileSet, x: f32, y: f32) {
         let used_tile = &tile_set.tile_list[tile as usize];
-        let sw = self.screen_width as f32;
-        let sh: f32 = self.screen_height as f32;
-
-        let sw = self.screen_width as f32;
-        let sh: f32 = self.screen_height as f32;
-
-        let x1 = -1.0 + x * (2.0 / sw);
-        let y1 = 1.0 + y * (2.0 / sh);
-        let x0 = x1 + (used_tile.vertices[0].0 as f32 * (2.0 / sw));
-        let y0 = y1 - (used_tile.vertices[0].1 as f32 * (2.0 / sh));
-        
-        let mut vertices: Vec<Coordinate2D> = Vec::new();
-        vertices.push(used_tile.vertices[0].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(0.0, 0.0));
-        vertices.push(used_tile.vertices[1].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(0.0, y0));
-        vertices.push(used_tile.vertices[2].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(x0, y0));
-        vertices.push(used_tile.vertices[3].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(x0, 0.0));
-    
-        let corners = [
-            used_tile.corners[0].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
-            used_tile.corners[1].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
-            used_tile.corners[2].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
-            used_tile.corners[3].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
-        ];
+        let vertices = &used_tile.vertices;
+        //let vertices = vec![
+        //    Coordinate2D(0.0, 0.0),
+        //    Coordinate2D(tile_set.width as f32, 0.0),
+        //    Coordinate2D(tile_set.width as f32, tile_set.height as f32),
+        //    Coordinate2D(0.0, tile_set.height as f32),
+        //];
 
         #[rustfmt::skip]
         let indicies: Vec<u32> = vec![
             0, 1, 2,
             2, 3, 0
         ];
+
+        let model = Mat4::from_translation(glam::vec3(x, y, 0.0));
         
-        update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, vec![
-    Coordinate2D(0.0, 0.0),
-    Coordinate2D(1.0, 0.0),
-    Coordinate2D(1.0, 1.0),
-    Coordinate2D(0.0, 1.0),
-], indicies);
+        update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices.to_vec(), used_tile.corners.to_vec(), indicies);
         
         unsafe {
             self.texture_shader.bind();
             self.texture_shader.set_int("tex", 0);
+            self.texture_shader.set_mat4("model", model.to_cols_array());
+            self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
             gl::ActiveTexture(gl::TEXTURE0);
             tile_set.surface.bind();
             gl::BindVertexArray(self.texture_vao);

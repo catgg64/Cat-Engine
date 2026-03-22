@@ -104,8 +104,8 @@ pub struct Tile {
 
 impl Tile {
     pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate2D; 4], screen_width: u32, screen_height: u32) -> Self {
-        let used_corners = [corners[0].return_into_gl_coordinates(screen_width, screen_height), corners[1].return_into_gl_coordinates(screen_width, screen_height), corners[2].return_into_gl_coordinates(screen_width, screen_height), corners[3].return_into_gl_coordinates(screen_width, screen_height)];
-        let used_vertices = [vertices[0].return_into_gl_coordinates(screen_width, screen_height), vertices[1].return_into_gl_coordinates(screen_width, screen_height), vertices[2].return_into_gl_coordinates(screen_width, screen_height), vertices[3].return_into_gl_coordinates(screen_width, screen_height)];
+        let used_corners = [corners[0].clone(), corners[1].clone(), corners[2].clone(), corners[3].clone()];
+        let used_vertices = [vertices[0].clone(), vertices[1].clone(), vertices[2].clone(), vertices[3].clone()];
         
         Self { corners: used_corners, vertices: used_vertices }
     }
@@ -131,10 +131,10 @@ impl TileSet {
         self.tile_list.push(
             Tile { corners: [
                 // Nah bru i give up just asking gpt this shi man
-                Coordinate2D(x as f32, y as f32),
-                Coordinate2D(x as f32, height as f32),
-                Coordinate2D(width as f32, y as f32),
-                Coordinate2D(width as f32, height as f32),
+                Coordinate2D(x as f32 / self.surface.width as f32, y as f32 / self.surface.height as f32),
+                Coordinate2D((x as f32 + width as f32) / self.surface.width as f32, y as f32 / self.surface.height as f32),
+                Coordinate2D((x as f32 + width as f32) / self.surface.width as f32, (y as f32 + height as f32) / self.surface.height as f32),
+                Coordinate2D(x as f32 / self.surface.width as f32, (y as f32 + height as f32) / self.surface.height as f32),
                 ], 
             vertices: [
                 Coordinate2D(0.0, 0.0),
@@ -154,9 +154,9 @@ impl TileSet {
 
     pub fn stretch_tile(&mut self, tile: u32, width: u32, height: u32) {
         self.tile_list[tile as usize].vertices = [
-            Coordinate2D(width as f32, height as f32),
-            Coordinate2D(width as f32, 0.0),
             Coordinate2D(0.0, 0.0),
+            Coordinate2D(width as f32, 0.0),
+            Coordinate2D(width as f32, height as f32),
             Coordinate2D(0.0, height as f32),
         ]
     }
