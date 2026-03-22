@@ -1,4 +1,4 @@
-use crate::{math::Coordinate2D};
+use crate::{math::Coordinate2D, video::surface};
 
 pub struct Surface {
     pub texture_id: u32,
@@ -18,12 +18,13 @@ impl Surface {
         let mut texture_id = 0;
         
         unsafe {
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
             gl::GenTextures(1, &mut texture_id);
             gl::BindTexture(gl::TEXTURE_2D, texture_id);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
             gl::TexImage2D(gl::TEXTURE_2D,
                            0,
                            gl::RGBA as i32,
@@ -36,9 +37,9 @@ impl Surface {
         }
 
         let mut corners = [
-            Coordinate2D(1.0, 1.0),
-            Coordinate2D(1.0, 0.0),
             Coordinate2D(0.0, 0.0),
+            Coordinate2D(1.0, 0.0),
+            Coordinate2D(1.0, 1.0),
             Coordinate2D(0.0, 1.0),
         ];
 
@@ -53,9 +54,9 @@ impl Surface {
 
     pub fn crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
         self.corners = [
-            Coordinate2D((x + width) as f32 / self.width as f32, (y + height) as f32 / self.height as f32),
-            Coordinate2D((x + width) as f32 / self.width as f32, y as f32 / self.height as f32),
             Coordinate2D(x as f32 / self.width as f32,           y as f32 / self.height as f32),
+            Coordinate2D((x + width) as f32 / self.width as f32, y as f32 / self.height as f32),
+            Coordinate2D((x + width) as f32 / self.width as f32, (y + height) as f32 / self.height as f32),
             Coordinate2D(x as f32 / self.width as f32,           (y + height) as f32 / self.height as f32),
         ];
         self.width = width;
@@ -95,3 +96,69 @@ impl Drop for Surface {
         }
     }
 }
+
+pub struct Tile {
+    pub corners: [Coordinate2D; 4],
+    pub vertices: [Coordinate2D; 4],
+}
+
+impl Tile {
+    pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate2D; 4], screen_width: u32, screen_height: u32) -> Self {
+        let used_corners = [corners[0].return_into_gl_coordinates(screen_width, screen_height), corners[1].return_into_gl_coordinates(screen_width, screen_height), corners[2].return_into_gl_coordinates(screen_width, screen_height), corners[3].return_into_gl_coordinates(screen_width, screen_height)];
+        let used_vertices = [vertices[0].return_into_gl_coordinates(screen_width, screen_height), vertices[1].return_into_gl_coordinates(screen_width, screen_height), vertices[2].return_into_gl_coordinates(screen_width, screen_height), vertices[3].return_into_gl_coordinates(screen_width, screen_height)];
+        
+        Self { corners: used_corners, vertices: used_vertices }
+    }
+}
+
+pub struct TileSet {
+    pub tile_list: Vec<Tile>,
+    pub surface: Surface,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl TileSet {
+    pub fn from_texture(path: &str) -> Self {
+        let mut surface = Surface::from_texture(path);
+        let (width, height) = (surface.width, surface.height);
+        let mut tile_list: Vec<Tile> = vec![];
+
+        Self { tile_list, surface, width, height }
+    }
+
+    pub fn simple_append_tile(&mut self, x: u32, y: u32, width: u32, height: u32) -> u32 {
+        self.tile_list.push(
+            Tile { corners: [
+                // Nah bru i give up just asking gpt this shi man
+                Coordinate2D(x as f32, y as f32),
+                Coordinate2D(x as f32, height as f32),
+                Coordinate2D(width as f32, y as f32),
+                Coordinate2D(width as f32, height as f32),
+                ], 
+            vertices: [
+                Coordinate2D(0.0, 0.0),
+                Coordinate2D(self.width as f32, 0.0),
+                Coordinate2D(self.width as f32, self.height as f32),
+                Coordinate2D(0.0, self.height as f32),
+                ]
+            }
+        );
+        (self.tile_list.len() - (1 as usize)) as u32
+    }
+
+    pub fn append_tile(&mut self, tile: Tile) -> u32 {
+        self.tile_list.push(tile);
+        (self.tile_list.len() - (1 as usize)) as u32
+    }
+
+    pub fn stretch_tile(&mut self, tile: u32, width: u32, height: u32) {
+        self.tile_list[tile as usize].vertices = [
+            Coordinate2D(width as f32, height as f32),
+            Coordinate2D(width as f32, 0.0),
+            Coordinate2D(0.0, 0.0),
+            Coordinate2D(0.0, height as f32),
+        ]
+    }
+}
+

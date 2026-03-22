@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 #[repr(C)]
 pub struct Coordinate2D(pub f32, pub f32);
 
@@ -15,11 +17,33 @@ impl Coordinate2D {
             1: coord.1,
         }
     }
+
+    pub fn turn_into_uv_gl_coordinates(&mut self, screen_width: u32, screen_height: u32) {
+        let coord = pixels_to_uv(self.0, self.1, screen_width, screen_height);
+        self.0 = coord.0;
+        self.1 = coord.1;
+    }
+
+    pub fn return_into_uv_gl_coordinates(&self, screen_width: u32, screen_height: u32) -> Self {
+        let coord = pixels_to_uv(self.0, self.1, screen_width, screen_height);
+        Self {
+            0: coord.0,
+            1: coord.1,
+        }
+    }
 }
 
 impl Clone for Coordinate2D {
     fn clone(&self) -> Self {
         Coordinate2D(self.0, self.1)
+    }
+}
+
+impl Add for Coordinate2D {
+    type Output = Coordinate2D;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Coordinate2D{ 0: self.0 + rhs.0, 1: self.1 + rhs.1 }
     }
 }
 
@@ -34,4 +58,16 @@ pub fn pixels_to_gl_coordinates(pos_x: f32, pos_y: f32, screen_width: u32, scree
     let y1 = 1.0 - pos_y * (2.0 / sh);
 
     (x1, y1)
+}
+
+pub fn pixels_to_uv(
+    x: f32,
+    y: f32,
+    tex_width: u32,
+    tex_height: u32
+) -> (f32, f32) {
+    (
+        x / tex_width as f32,
+        y / tex_height as f32,
+    )
 }

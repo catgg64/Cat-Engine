@@ -84,6 +84,14 @@ pub fn update_uv_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo:
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         let (_, vertex_bytes, _) = vertices.align_to::<u8>();
         gl::BufferData(gl::ARRAY_BUFFER, vertex_bytes.len() as isize, vertex_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            std::mem::size_of::<crate::math::Coordinate2D>() as i32,
+            std::ptr::null(),
+        );
         
         gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
         let (_, uv_bytes, _) = uvs.align_to::<u8>();
@@ -351,6 +359,7 @@ impl Drop for Shader {
 
 pub struct Renderer {
     pub projection: glam::Mat4,
+    pub orthographic_projection: glam::Mat4,
     texture_shader: Shader,
     texture_vao: u32,
     texture_vbo: u32,
@@ -389,8 +398,9 @@ impl Renderer {
         let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
         let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array(3, 2);
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
+        let orthographic_projection = glam::Mat4::orthographic_rh_gl(0.0, screen_width as f32, screen_height as f32, 0.0, -1.0, 1.0);
 
-        Self { projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
+        Self { projection, orthographic_projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
     }
     
     pub fn set_projection(&mut self, projection: Mat4, fov: f32, near_plane: f32, far_plane: f32) {
@@ -405,31 +415,29 @@ impl Renderer {
     }
 
     pub fn blit(&mut self, surface: &mut Surface, pos_x: f32, pos_y: f32) {
-        let sw = self.screen_width as f32;
-        let sh: f32 = self.screen_height as f32;
-
-        let x1 = -1.0 + pos_x * (2.0 / sw);
-        let y1 = 1.0 - pos_y * (2.0 / sh);
-        let x0 = x1 + (surface.width as f32 * (2.0 / sw));
-        let y0 = y1 - (surface.height as f32 * (2.0 / sh));
-
-        let mut vertices: Vec<Coordinate2D> = Vec::new();
-        vertices.push(Coordinate2D(x0, y0));
-        vertices.push(Coordinate2D(x0, y1));
-        vertices.push(Coordinate2D(x1, y1));
-        vertices.push(Coordinate2D(x1, y0));
+        let vertices = vec![
+            Coordinate2D(0.0, 0.0),
+            Coordinate2D(surface.width as f32, 0.0),
+            Coordinate2D(surface.width as f32, surface.height as f32),
+            Coordinate2D(0.0, surface.height as f32),
+        ];
 
         #[rustfmt::skip]
         let indicies: Vec<u32> = vec![
             0, 1, 2,
             2, 3, 0
         ];
+
+        let model = Mat4::from_translation(glam::vec3(pos_x, pos_y, 0.0));
+        
         
         update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, surface.corners.to_vec(), indicies);
         
         unsafe {
             self.texture_shader.bind();
             self.texture_shader.set_int("tex", 0);
+            self.texture_shader.set_mat4("model", model.to_cols_array());
+            self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
             gl::ActiveTexture(gl::TEXTURE0);
             surface.bind();
             gl::BindVertexArray(self.texture_vao);
@@ -437,16 +445,63 @@ impl Renderer {
         }
     }
 
-    pub fn draw_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D,  surface: &mut Surface, uvs: Vec<Coordinate2D>) {
+    pub fn draw_tileset(&mut self, tile: u32, tile_set: &mut surface::TileSet, x: f32, y: f32) {
+        let used_tile = &tile_set.tile_list[tile as usize];
+        let sw = self.screen_width as f32;
+        let sh: f32 = self.screen_height as f32;
+
+        let sw = self.screen_width as f32;
+        let sh: f32 = self.screen_height as f32;
+
+        let x1 = -1.0 + x * (2.0 / sw);
+        let y1 = 1.0 + y * (2.0 / sh);
+        let x0 = x1 + (used_tile.vertices[0].0 as f32 * (2.0 / sw));
+        let y0 = y1 - (used_tile.vertices[0].1 as f32 * (2.0 / sh));
+        
         let mut vertices: Vec<Coordinate2D> = Vec::new();
-        vertices.push(p1.return_into_gl_coordinates(self.screen_width, self.screen_height));
-        vertices.push(p2.return_into_gl_coordinates(self.screen_width, self.screen_height));
-        vertices.push(p3.return_into_gl_coordinates(self.screen_width, self.screen_height));
+        vertices.push(used_tile.vertices[0].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(0.0, 0.0));
+        vertices.push(used_tile.vertices[1].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(0.0, y0));
+        vertices.push(used_tile.vertices[2].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(x0, y0));
+        vertices.push(used_tile.vertices[3].return_into_gl_coordinates(self.screen_width, self.screen_height) + Coordinate2D(x0, 0.0));
+    
+        let corners = [
+            used_tile.corners[0].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
+            used_tile.corners[1].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
+            used_tile.corners[2].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
+            used_tile.corners[3].return_into_uv_gl_coordinates(self.screen_width, self.screen_height),
+        ];
 
         #[rustfmt::skip]
         let indicies: Vec<u32> = vec![
             0, 1, 2,
+            2, 3, 0
         ];
+        
+        update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, vec![
+    Coordinate2D(0.0, 0.0),
+    Coordinate2D(1.0, 0.0),
+    Coordinate2D(1.0, 1.0),
+    Coordinate2D(0.0, 1.0),
+], indicies);
+        
+        unsafe {
+            self.texture_shader.bind();
+            self.texture_shader.set_int("tex", 0);
+            gl::ActiveTexture(gl::TEXTURE0);
+            tile_set.surface.bind();
+            gl::BindVertexArray(self.texture_vao);
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+        }
+    }
+
+    pub fn draw_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D,  surface: &mut Surface, uvs: Vec<Coordinate2D>) {
+        let vertices = vec![p1, p2, p3];
+
+        let indicies: Vec<u32> = vec![
+            0, 1, 2
+        ];
+
+        let model = Mat4::IDENTITY;
 
         update_uv_element_array(&mut self.triangle_vao, &mut self.triangle_vbo, &mut self.triangle_ebo, &mut self.triangle_uv_vbo, vertices, uvs, indicies);
         

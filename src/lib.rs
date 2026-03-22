@@ -71,7 +71,7 @@ impl CatEngine {
     }
 
     pub fn clear_screen(&self, color: pixel::Color) {
-        let (true_color_r, true_color_g, true_color_b, true_color_a) = (color.r / 255, color.g / 255, color.b / 255, color.a / 255);
+        let (true_color_r, true_color_g, true_color_b, true_color_a) = (color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0, color.a as f32 / 255.0);
         unsafe {
             gl::ClearColor(true_color_r as f32,true_color_g as f32,true_color_b as f32,true_color_a as f32);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
