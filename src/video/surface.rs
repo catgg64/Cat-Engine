@@ -89,17 +89,21 @@ impl Surface {
     pub fn blit(&mut self, surface: &Surface, x_offset: u32, y_offset: u32) {
         for y in 0..surface.height as usize {
             for x in 0..surface.width as usize {
-            if x + x_offset as usize >= self.width as usize ||
-            y + y_offset as usize >= self.height as usize {
-                continue;
-            }
-            let atlas_index =
-                ((y + y_offset as usize) * surface.width as usize + (x + x_offset as usize)) * 4;
-            let src_index =
-                (y * self.width as usize + x) * 4;
+                let dst_x = x + x_offset as usize;
+                let dst_y = y + y_offset as usize;
 
-            self.data[atlas_index..atlas_index + 4]
-                .copy_from_slice(&surface.data[src_index..src_index + 4]);
+                if dst_x >= self.width as usize || dst_y >= self.height as usize {
+                    continue;
+                }
+
+                let atlas_index =
+                    (dst_y * self.width as usize + dst_x) * 4;
+
+                let src_index =
+                    (y * surface.width as usize + x) * 4;
+
+                self.data[atlas_index..atlas_index + 4]
+                    .copy_from_slice(&surface.data[src_index..src_index + 4]);
             }
         }
         self.upload();
@@ -146,7 +150,31 @@ impl Surface {
         }
     }
 
+    pub fn return_true_crop(&self, x: u32, y: u32, width: u32, height: u32) -> Self {
+        let mut new_data = vec![0u8; (width * height * 4) as usize];
 
+        for row in 0..height {
+            for col in 0..width {
+                let src_x = x + col;
+                let src_y = y + row;
+
+                let src_index =
+                    ((src_y * self.width + src_x) * 4) as usize;
+
+                let dst_index =
+                    ((row * width + col) * 4) as usize;
+
+                new_data[dst_index..dst_index + 4]
+                    .copy_from_slice(&self.data[src_index..src_index + 4]);
+            }
+        }
+
+        let mut new_surface = Surface::new(width as usize, height as usize);
+        new_surface.data = new_data;
+        new_surface.upload();
+
+        new_surface
+    }
 
     pub fn bind(&mut self) {
         unsafe {
@@ -166,14 +194,18 @@ impl Drop for Surface {
 pub struct Tile {
     pub corners: [Coordinate2D; 4],
     pub vertices: [Coordinate2D; 4],
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Tile {
-    pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate2D; 4], screen_width: u32, screen_height: u32) -> Self {
+    pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate2D; 4], x: u32, y: u32, width: u32, height: u32) -> Self {
         let used_corners = [corners[0].clone(), corners[1].clone(), corners[2].clone(), corners[3].clone()];
         let used_vertices = [vertices[0].clone(), vertices[1].clone(), vertices[2].clone(), vertices[3].clone()];
         
-        Self { corners: used_corners, vertices: used_vertices }
+        Self { corners: used_corners, vertices: used_vertices, x, y, width, height }
     }
 }
 
@@ -212,10 +244,18 @@ impl TileSet {
                 Coordinate2D(width as f32, 0.0),
                 Coordinate2D(width as f32, height as f32),
                 Coordinate2D(0.0, height as f32),
-                ]
+                ],
+            x,
+            y,
+            width,
+            height,
             }
         );
         (self.tile_list.len() - (1 as usize)) as u32
+    }
+
+    pub fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
+        self.surface.blit(&surface, offset_x, offset_y);
     }
 
     pub fn append_tile(&mut self, tile: Tile) -> u32 {
