@@ -9,6 +9,7 @@ pub mod video;
 pub mod math;
 pub mod input;
 pub mod mesh;
+pub mod sprite;
 
 pub struct CatEngine {
     sdl_context: sdl2::Sdl,
@@ -47,6 +48,11 @@ impl CatEngine {
             gl::Disable(gl::CULL_FACE);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
+
+        video_subsystem.gl_set_swap_interval(-1).unwrap_or_else(|_| {
+            video_subsystem.gl_set_swap_interval(1).unwrap();
+        });
+
         let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
         let mut input = input::Input::new(&sdl_context);
         let mut running: bool = true;

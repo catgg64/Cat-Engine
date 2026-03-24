@@ -1,10 +1,11 @@
 use std::ffi::CString;
-
 use glam::Mat4;
 
+use crate::sprite;
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D };
 use crate::mesh::{ Mesh };
+use crate::sprite::Sprite;
 
 pub mod surface;
 
@@ -357,6 +358,13 @@ impl Drop for Shader {
     }
 }
 
+pub enum CatEngineShader {
+    Shader(Shader),
+    TextureShader,
+    ThirdDimensionShader,
+    TestShader,
+}
+
 pub struct Renderer {
     pub projection: glam::Mat4,
     pub orthographic_projection: glam::Mat4,
@@ -365,6 +373,10 @@ pub struct Renderer {
     texture_vbo: u32,
     texture_ebo: u32,
     texture_uv_vbo: u32,
+    sprite_vao: u32,
+    sprite_vbo: u32,
+    sprite_ebo: u32,
+    sprite_uv_vbo: u32,
     triangle_shader: Shader,
     triangle_vao: u32,
     triangle_vbo: u32,
@@ -394,13 +406,14 @@ impl Renderer {
         let triangle3d_shader = Shader::new("triangle3d.vert", "triangle3d.frag");
         let test_shader = Shader::new("opengltest.vert", "opengltest.frag");
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
+        let (sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
         let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
         let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array(3, 2);
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
         let orthographic_projection = glam::Mat4::orthographic_rh_gl(0.0, screen_width as f32, screen_height as f32, 0.0, -1.0, 1.0);
 
-        Self { projection, orthographic_projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
+        Self { projection, orthographic_projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
     }
     
     pub fn set_projection(&mut self, projection: Mat4, fov: f32, near_plane: f32, far_plane: f32) {
@@ -599,6 +612,36 @@ impl Renderer {
             gl::BindVertexArray(0);
         }
     }
+
+    // pub fn draw_sprite_list(&mut self, sprite_list: Vec<Sprite>, offset_x: f32, offset_y: f32) {
+    //     let mut vertices = vec![];
+    //     #[rustfmt::skip]
+    //     let mut indicies: Vec<u32> = vec![];
+    //     let mut uvs: Vec<u32> = vec![];
+         
+    //     let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
+        
+    //     for sprite in sprite_list {
+    //         match sprite {
+    //             sprite::Sprite::Surface(x, y, surface, shader ) => {
+
+                    
+                    
+    //                 unsafe {
+    //                     self.texture_shader.bind();
+    //                     self.texture_shader.set_int("tex", 0);
+    //                     self.texture_shader.set_mat4("model", model.to_cols_array());
+    //                     self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
+    //                     gl::ActiveTexture(gl::TEXTURE0);
+    //                     surface.bind();
+    //                     gl::BindVertexArray(self.texture_vao);
+    //                     gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, surface.corners.to_vec(), indicies);
+    // }
 }
 
 
