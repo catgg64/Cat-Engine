@@ -138,3 +138,11 @@ pub mod keyboard {
     pub use sdl2::keyboard::{Keycode, Scancode, Mod};
     // TODO: Add helpers    
 }
+
+pub mod opengl {
+    pub use gl::*;
+}
+
+pub mod sdl {
+    pub use sdl2::*;
+}

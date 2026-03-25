@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use glam::Mat4;
 
-use crate::sprite;
+use crate::sprite::{self, SpriteList};
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D };
 use crate::mesh::{ Mesh };
@@ -613,35 +613,59 @@ impl Renderer {
         }
     }
 
-    // pub fn draw_sprite_list(&mut self, sprite_list: Vec<Sprite>, offset_x: f32, offset_y: f32) {
-    //     let mut vertices = vec![];
-    //     #[rustfmt::skip]
-    //     let mut indicies: Vec<u32> = vec![];
-    //     let mut uvs: Vec<u32> = vec![];
-         
-    //     let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
+    pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
+        let mut vertices = vec![];
+        #[rustfmt::skip]
+        let mut indicies: Vec<u32> = vec![];
+        let mut uvs: Vec<Coordinate2D> = vec![];
         
-    //     for sprite in sprite_list {
-    //         match sprite {
-    //             sprite::Sprite::Surface(x, y, surface, shader ) => {
+        for tile in &sprite_list.sprite_list {
+            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[0].clone());
+            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[1].clone());
+            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[2].clone());
+            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[3].clone());
+        }
+         
+        let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
+        let mut current_sprite = 0;
+        
+        for sprite in &sprite_list.sprite_list {
+            match &sprite.0 {
+                sprite::Sprite::Surface(x, y, width, height, surface, shader ) => {
+                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
+                }
+                sprite::Sprite::Tile(x, y, width, height, tile_set, tile, shader) => {
+                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
+                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
+                }
+            }
+            indicies.push(current_sprite);
+            indicies.push(current_sprite + 1);
+            indicies.push(current_sprite + 2);
+            indicies.push(current_sprite);
+            indicies.push(current_sprite + 2);
+            indicies.push(current_sprite + 3);
+            current_sprite += 4;
+        }
+        
+        update_uv_element_array(&mut self.sprite_vao, &mut self.sprite_vbo, &mut self.sprite_ebo, &mut self.sprite_uv_vbo, vertices, uvs, indicies);
 
-                    
-                    
-    //                 unsafe {
-    //                     self.texture_shader.bind();
-    //                     self.texture_shader.set_int("tex", 0);
-    //                     self.texture_shader.set_mat4("model", model.to_cols_array());
-    //                     self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
-    //                     gl::ActiveTexture(gl::TEXTURE0);
-    //                     surface.bind();
-    //                     gl::BindVertexArray(self.texture_vao);
-    //                     gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, surface.corners.to_vec(), indicies);
-    // }
+        unsafe {
+            self.texture_shader.bind();
+            self.texture_shader.set_int("tex", 0);
+            self.texture_shader.set_mat4("model", model.to_cols_array());
+            self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
+            gl::ActiveTexture(gl::TEXTURE0);
+            sprite_list.tile_set.surface.bind();
+            gl::BindVertexArray(self.sprite_vao);
+            gl::DrawElements(gl::TRIANGLES, sprite_list.sprite_list.len() as i32 * 6, gl::UNSIGNED_INT, std::ptr::null());
+        }
+    }
 }
 
 
