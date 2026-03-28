@@ -10,6 +10,7 @@ pub mod math;
 pub mod input;
 pub mod mesh;
 pub mod sprite;
+pub mod font;
 
 pub struct CatEngine {
     sdl_context: sdl2::Sdl,

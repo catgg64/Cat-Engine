@@ -1,11 +1,10 @@
 use std::ffi::CString;
 use glam::Mat4;
 
-use crate::sprite::{self, SpriteList};
+use crate::sprite::{self, ComplexSpriteList, SpriteList, Sprite};
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D };
 use crate::mesh::{ Mesh };
-use crate::sprite::Sprite;
 
 pub mod surface;
 
@@ -97,7 +96,15 @@ pub fn update_uv_element_array(&mut vao: &mut u32, &mut vbo: &mut u32, &mut ebo:
         gl::BindBuffer(gl::ARRAY_BUFFER, uv_vbo);
         let (_, uv_bytes, _) = uvs.align_to::<u8>();
         gl::BufferData(gl::ARRAY_BUFFER, uv_bytes.len() as isize, uv_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
-        
+        gl::VertexAttribPointer(
+            1,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            std::mem::size_of::<Coordinate2D>() as i32,
+            std::ptr::null(),
+        );
+
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         let (_, indices_bytes, _) = indicies.align_to::<u8>();
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, indices_bytes.len() as isize, indices_bytes.as_ptr() as *const _, gl::DYNAMIC_DRAW);
@@ -427,12 +434,17 @@ impl Renderer {
         self.projection = projection;
     }
 
-    pub fn blit(&mut self, surface: &mut Surface, pos_x: f32, pos_y: f32) {
+    pub fn set_size(&mut self, width: u32, height: u32) {
+        self.screen_width = width;
+        self.screen_height = height;
+    }
+
+    pub fn blit(&mut self, surface: & Surface, pos_x: f32, pos_y: f32, width: f32, height: f32) {
         let vertices = vec![
             Coordinate2D(0.0, 0.0),
-            Coordinate2D(surface.width as f32, 0.0),
-            Coordinate2D(surface.width as f32, surface.height as f32),
-            Coordinate2D(0.0, surface.height as f32),
+            Coordinate2D(width as f32, 0.0),
+            Coordinate2D(width as f32, height as f32),
+            Coordinate2D(0.0, height as f32),
         ];
 
         #[rustfmt::skip]
@@ -613,7 +625,7 @@ impl Renderer {
         }
     }
 
-    pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
+    pub fn draw_complex_sprite_list(&mut self, sprite_list: &mut ComplexSpriteList, offset_x: f32, offset_y: f32) {
         let mut vertices = vec![];
         #[rustfmt::skip]
         let mut indicies: Vec<u32> = vec![];
@@ -627,17 +639,17 @@ impl Renderer {
         }
          
         let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
-        let mut current_sprite = 0;
+        let mut current_sprite: u32 = 0;
         
         for sprite in &sprite_list.sprite_list {
             match &sprite.0 {
-                sprite::Sprite::Surface(x, y, width, height, surface, shader ) => {
+                sprite::ComplexSprite::Surface(x, y, width, height, surface, shader ) => {
                     vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
                     vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
                     vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
                     vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
                 }
-                sprite::Sprite::Tile(x, y, width, height, tile_set, tile, shader) => {
+                sprite::ComplexSprite::Tile(x, y, width, height, tile_set, tile, shader) => {
                     vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
                     vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
                     vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
@@ -652,7 +664,7 @@ impl Renderer {
             indicies.push(current_sprite + 3);
             current_sprite += 4;
         }
-        
+
         update_uv_element_array(&mut self.sprite_vao, &mut self.sprite_vbo, &mut self.sprite_ebo, &mut self.sprite_uv_vbo, vertices, uvs, indicies);
 
         unsafe {
@@ -666,6 +678,29 @@ impl Renderer {
             gl::DrawElements(gl::TRIANGLES, sprite_list.sprite_list.len() as i32 * 6, gl::UNSIGNED_INT, std::ptr::null());
         }
     }
+
+    pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
+        sprite_list.sort_by_z();
+
+        for sprite in &sprite_list.sprite_list {
+            if sprite.get_x() + sprite.get_width() - offset_x > 0.0 
+            && sprite.get_x() - offset_x < self.screen_width as f32 
+            && sprite.get_y() + sprite.get_height() - offset_y > 0.0 
+            && sprite.get_y() - offset_y < self.screen_height as f32 {
+                match sprite {
+                    Sprite::Surface(x, y, z, width, height, surface, shader, _) => {
+                        self.blit(& surface, *x, *y, *width, *height);
+                    }
+
+                    Sprite::Tile(x, y, z, tile_set, tile, shader, _) => {
+                        self.draw_tileset(*tile, &mut tile_set.borrow_mut(), *x, *y);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn draw_font(&mut self, )
 }
 
 

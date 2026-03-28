@@ -176,7 +176,7 @@ impl Surface {
         new_surface
     }
 
-    pub fn bind(&mut self) {
+    pub fn bind(& self) {
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, self.texture_id);
         }
@@ -198,6 +198,8 @@ pub struct Tile {
     pub y: u32,
     pub width: u32,
     pub height: u32,
+    pub visual_width: f32,
+    pub visual_height: f32,
 }
 
 impl Tile {
@@ -205,7 +207,7 @@ impl Tile {
         let used_corners = [corners[0].clone(), corners[1].clone(), corners[2].clone(), corners[3].clone()];
         let used_vertices = [vertices[0].clone(), vertices[1].clone(), vertices[2].clone(), vertices[3].clone()];
         
-        Self { corners: used_corners, vertices: used_vertices, x, y, width, height }
+        Self { corners: used_corners, vertices: used_vertices, x, y, width, height, visual_width: width as f32, visual_height: height as f32 }
     }
 }
 
@@ -249,6 +251,8 @@ impl TileSet {
             y,
             width,
             height,
+            visual_width: width as f32, 
+            visual_height: height as f32
             }
         );
         (self.tile_list.len() - (1 as usize)) as u32
@@ -269,7 +273,9 @@ impl TileSet {
             Coordinate2D(width as f32, 0.0),
             Coordinate2D(width as f32, height as f32),
             Coordinate2D(0.0, height as f32),
-        ]
+        ];
+        self.tile_list[tile as usize].visual_width = width as f32;
+        self.tile_list[tile as usize].visual_height = height as f32;
     }
 }
 
