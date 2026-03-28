@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use glam::Mat4;
 
+use crate::font::Font;
 use crate::sprite::{self, ComplexSpriteList, SpriteList, Sprite};
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D };
@@ -700,7 +701,24 @@ impl Renderer {
         }
     }
 
-    pub fn draw_font(&mut self, )
+    pub fn draw_font(&mut self, font: Font, text: &str, x: f32, y: f32) {
+        let mut vertices: Vec<Coordinate2D> = vec![];
+        #[rustfmt::skip]
+        let mut indicies: Vec<u32> = vec![];
+        let mut uvs: Vec<Coordinate2D> = vec![];
+        
+        for character in text.chars() {
+            uvs.push(font.uvs.get(&character.to_string()).unwrap()[0].clone());
+            uvs.push(font.uvs.get(&character.to_string()).unwrap()[1].clone());
+            uvs.push(font.uvs.get(&character.to_string()).unwrap()[2].clone());
+            uvs.push(font.uvs.get(&character.to_string()).unwrap()[3].clone());
+            vertices.push(Coordinate2D(font.return_character_from_string(&character.to_string()).unwrap().x as f32, font.return_character_from_string(&character.to_string()).unwrap().y as f32));
+        }
+         
+        let model = Mat4::from_translation(glam::vec3(x, y, 0.0));
+        let mut current_sprite: u32 = 0;
+        
+    }
 }
 
 

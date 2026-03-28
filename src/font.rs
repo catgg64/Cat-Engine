@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use crate::math::Coordinate2D;
 
 pub struct Character {
-    crt: String,
-    x: u32,
-    y: u32,
-    width: u32,
-    height: u32,
+    pub crt: String,
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 pub struct Font {
-    character_list: Vec<Character>,
-    uvs: HashMap<String, [Coordinate2D; 4]>,
+    pub character_list: Vec<Character>,
+    pub uvs: HashMap<String, [Coordinate2D; 4]>,
 }
 
 impl Font {
@@ -27,5 +27,14 @@ impl Font {
             ]);
         }
         Self { character_list, uvs }
+    }
+
+    pub fn return_character_from_string(&self, crt: &str) -> Result<&Character, String> {
+        for character in &self.character_list {
+            if character.crt == crt {
+                return Ok(&character)
+            }
+        }
+        Err("no character with such letter".to_string())
     }
 }
