@@ -136,7 +136,7 @@ impl SpriteList {
 
     pub fn sort_by_z(&mut self) {
         self.sprite_list.sort_by(|a, b| {
-            (-a.get_z()).partial_cmp(&-b.get_z()).unwrap()
+            (a.get_z()).partial_cmp(&b.get_z()).unwrap()
         });
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::math::Coordinate2D;
+use crate::{math::Coordinate2D, video::surface::Surface};
 
 pub struct Character {
     pub crt: String,
@@ -13,20 +13,25 @@ pub struct Character {
 pub struct Font {
     pub character_list: Vec<Character>,
     pub uvs: HashMap<String, [Coordinate2D; 4]>,
+    pub surface: Surface,
 }
 
 impl Font {
-    pub fn new(character_list: Vec<Character>) -> Self {
+    pub fn new(path: &str, character_list: Vec<Character>) -> Self {
+        let mut surface = Surface::from_texture(path);
         let mut uvs: HashMap<String, [Coordinate2D; 4]> = HashMap::new();
         for character in &character_list {
+            let w = surface.width as f32;
+            let h = surface.height as f32;
+
             uvs.insert(character.crt.clone(), [
-                Coordinate2D{0: character.x as f32, 1: character.y as f32},
-                Coordinate2D{0: character.x as f32 + character.width as f32, 1: character.y as f32},
-                Coordinate2D{0: character.x as f32 + character.width as f32, 1: character.y as f32 + character.height as f32},
-                Coordinate2D{0: character.x as f32, 1: character.y as f32 + character.height as f32},
+                Coordinate2D(character.x as f32 / w, character.y as f32 / h),
+                Coordinate2D((character.x + character.width) as f32 / w, character.y as f32 / h),
+                Coordinate2D((character.x + character.width) as f32 / w, (character.y + character.height) as f32 / h),
+                Coordinate2D(character.x as f32 / w, (character.y + character.height) as f32 / h),
             ]);
         }
-        Self { character_list, uvs }
+        Self { character_list, uvs, surface }
     }
 
     pub fn return_character_from_string(&self, crt: &str) -> Result<&Character, String> {

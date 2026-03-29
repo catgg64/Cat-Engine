@@ -224,9 +224,20 @@ pub struct Shader {
 }
 
 impl Shader {
+    //! # Shader
+    //! 
+    //! A set of instructions to be read throught the GPU.
+    //! Vertex shaders resemble the corners, and fragment shaders resemble each pixel.
+    
+    /// Creates a new shader
+    /// 
+    /// # Examples
+    /// ```ignore
+    /// let mut shader = Shader::new("vertex.vert, fragment.frag");
+    /// ```
     pub fn new(vert_shader_path: &str, frag_shader_path: &str) -> Shader {
-        let vert_shader_file = std::fs::read_to_string(format!("{}/{}", env!("CARGO_MANIFEST_DIR"), vert_shader_path)).expect("failed loading the vertex file: ");
-        let frag_shader_file = std::fs::read_to_string(format!("{}/{}", env!("CARGO_MANIFEST_DIR"), frag_shader_path)).expect("failed loading the fragment file: ");
+        let vert_shader_file = std::fs::read_to_string(format!("{}", vert_shader_path)).expect("failed loading the vertex file: ");
+        let frag_shader_file = std::fs::read_to_string(format!("{}", frag_shader_path)).expect("failed loading the fragment file: ");
         let vert_src = CString::new(vert_shader_file).unwrap();
         let frag_src = CString::new(frag_shader_file).unwrap();
 
@@ -306,6 +317,7 @@ impl Shader {
         }
     }
 
+    /// Binds the shader.
     pub fn bind(&self) {
         unsafe {
             gl::UseProgram(self.program_id)
@@ -348,6 +360,7 @@ impl Shader {
         }
     }
 
+    /// Gets the location of an attribute.
     pub fn get_attrib_location(&self, attrib: &str) -> Result<i32, ()> {
         unsafe {
             let attrib = CString::new(attrib).unwrap();
@@ -367,9 +380,14 @@ impl Drop for Shader {
 }
 
 pub enum CatEngineShader {
+    /// Helps set up shaders. On this version, this enum doesn't do anything, and is always set to TextureShader. I plan on getting this to work.
+    /// You can set up your custom one, values aPOS and aUV, both vec2, are already set up. Plans on letting addition of many other input values.
     Shader(Shader),
+    /// A simple, Texture shader that blits in a texture.
     TextureShader,
+    /// A shader used for 3D.
     ThirdDimensionShader,
+    /// A basic Shader used for tests that sets up a Triangle with colors green, red and blue.
     TestShader,
 }
 
@@ -408,11 +426,15 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    //! # Renderer
+    //! 
+    //! Used for Rendering.
+
     pub fn new(screen_width: u32, screen_height: u32, fov: f32, near_plane: f32, far_plane: f32) -> Self {
-        let texture_shader = Shader::new("texture.vert", "texture.frag");
-        let triangle_shader = Shader::new("triangle.vert", "triangle.frag");
-        let triangle3d_shader = Shader::new("triangle3d.vert", "triangle3d.frag");
-        let test_shader = Shader::new("opengltest.vert", "opengltest.frag");
+        let texture_shader = Shader::new(format!("{}, texture.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, texture.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let triangle_shader = Shader::new(format!("{}, triangle.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, triangle.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let triangle3d_shader = Shader::new(format!("{}, triangle3d.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, triangle3d.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let test_shader = Shader::new(format!("{}, opengltest.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, opengltest.frag", env!("CARGO_MANIFEST_DIR")).as_str());
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
         let (sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
@@ -423,7 +445,7 @@ impl Renderer {
 
         Self { projection, orthographic_projection, texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
     }
-    
+
     pub fn set_projection(&mut self, projection: Mat4, fov: f32, near_plane: f32, far_plane: f32) {
         self.projection = projection;
         self.fov = fov;
@@ -435,11 +457,21 @@ impl Renderer {
         self.projection = projection;
     }
 
+    /// Sets up size independentally. You should always use CatEngine's implementation for that.
     pub fn set_size(&mut self, width: u32, height: u32) {
         self.screen_width = width;
         self.screen_height = height;
     }
 
+    /// Blits a surface onto the screen. For proper Z control, use sprites.
+    /// 
+    /// # Examples
+    /// ```ignore
+    /// let catengine = CatEngine::new("Surface", 800, 800, vec![]);
+    /// let surface = Surface::from_texture("mel.png");
+    /// catengine.renderer.blit(surface, 20.0, 20.0, 100.0, 100.0);
+    /// // Most values here are arbitrary.
+    /// ```
     pub fn blit(&mut self, surface: & Surface, pos_x: f32, pos_y: f32, width: f32, height: f32) {
         let vertices = vec![
             Coordinate2D(0.0, 0.0),
@@ -471,6 +503,15 @@ impl Renderer {
         }
     }
 
+    /// Draws a Tile from a TileSet.
+    /// 
+    /// # Examples
+    /// ```ignore
+    /// let catengine = CatEngine::new("Surface", 800, 800, vec![]);
+    /// let surface = TileSet::from_texture("atlas.png");
+    /// catengine.renderer.blit(surface, 20.0, 20.0, 100.0, 100.0);
+    /// // Most values here are arbitrary.
+    /// ```
     pub fn draw_tileset(&mut self, tile: u32, tile_set: &mut surface::TileSet, x: f32, y: f32) {
         let used_tile = &tile_set.tile_list[tile as usize];
         let vertices = &used_tile.vertices;
@@ -701,23 +742,62 @@ impl Renderer {
         }
     }
 
-    pub fn draw_font(&mut self, font: Font, text: &str, x: f32, y: f32) {
+    pub fn draw_font(&mut self, font: &Font, text: &str, x: f32, y: f32, size: f32) {
         let mut vertices: Vec<Coordinate2D> = vec![];
         #[rustfmt::skip]
         let mut indicies: Vec<u32> = vec![];
-        let mut uvs: Vec<Coordinate2D> = vec![];
         
+        
+        let mut current_sprite: u32 = 0;
+        let mut uvs: Vec<Coordinate2D> = vec![];
+        let mut cursor_x = 0;
+
         for character in text.chars() {
-            uvs.push(font.uvs.get(&character.to_string()).unwrap()[0].clone());
-            uvs.push(font.uvs.get(&character.to_string()).unwrap()[1].clone());
-            uvs.push(font.uvs.get(&character.to_string()).unwrap()[2].clone());
-            uvs.push(font.uvs.get(&character.to_string()).unwrap()[3].clone());
-            vertices.push(Coordinate2D(font.return_character_from_string(&character.to_string()).unwrap().x as f32, font.return_character_from_string(&character.to_string()).unwrap().y as f32));
+            let ch = character.to_string();
+            let glyph = font.return_character_from_string(&ch).unwrap();
+
+            let uv = font.uvs.get(&ch).unwrap();
+
+            uvs.push(Coordinate2D(uv[0].0, uv[0].1));
+            uvs.push(Coordinate2D(uv[1].0, uv[1].1));
+            uvs.push(Coordinate2D(uv[2].0, uv[2].1));
+            uvs.push(Coordinate2D(uv[3].0, uv[3].1));
+
+            let y = 0.0;
+            let w = glyph.width as f32;
+            let h = glyph.height as f32;
+                        
+            vertices.push(Coordinate2D(cursor_x as f32, 0.0));
+            vertices.push(Coordinate2D(cursor_x as f32 + w * size, 0.0));
+            vertices.push(Coordinate2D(cursor_x as f32 + w * size, h * size));
+            vertices.push(Coordinate2D(cursor_x as f32, h * size));
+            cursor_x += glyph.width * size as u32;
+
+            indicies.push(current_sprite);
+            indicies.push(current_sprite + 1);
+            indicies.push(current_sprite + 2);
+            indicies.push(current_sprite);
+            indicies.push(current_sprite + 2);
+            indicies.push(current_sprite + 3);
+
+            current_sprite += 4;
         }
          
         let model = Mat4::from_translation(glam::vec3(x, y, 0.0));
-        let mut current_sprite: u32 = 0;
+        let lenght = indicies.len() as i32;
+
+        update_uv_element_array(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices.to_vec(), uvs, indicies);
         
+        unsafe {
+            self.texture_shader.bind();
+            self.texture_shader.set_int("tex", 0);
+            self.texture_shader.set_mat4("model", model.to_cols_array());
+            self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
+            gl::ActiveTexture(gl::TEXTURE0);
+            font.surface.bind();
+            gl::BindVertexArray(self.texture_vao);
+            gl::DrawElements(gl::TRIANGLES, lenght, gl::UNSIGNED_INT, std::ptr::null());
+        }
     }
 }
 
