@@ -1,9 +1,11 @@
 use std::collections::{HashMap, HashSet};
-use sdl2::rect::Point;
 use sdl2::{ Sdl, event::Event, keyboard::Scancode };
 use std::ops::Index;
 use sdl2::mouse::MouseUtil;
 use sdl2::video::Window;
+
+use crate::math;
+use crate::video::Renderer;
 
 pub struct Input {
     pressed: HashSet<Scancode>,
@@ -12,7 +14,7 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new(sdl_context: Sdl) -> Self {
+    pub fn new(sdl_context: &Sdl) -> Self {
         let mouse_util = sdl_context.mouse();
         Self {
             pressed: HashSet::new(),
@@ -55,8 +57,8 @@ impl Input {
         self.mouse_util.show_cursor(visibility);
     }
 
-    pub fn set_mouse_position(&self, position: crate::shape::point::Point, window: &Window) {
-        self.mouse_util.warp_mouse_in_window(window, position.return_xy().0 as i32, position.return_xy().1 as i32);
+    pub fn set_mouse_position(&self, position: math::Coordinate2D, window: &Window) {
+        self.mouse_util.warp_mouse_in_window(window, position.0 as i32, position.1 as i32);
     }
 
     pub fn get_mouse_delta(&self) -> (i32, i32) {
@@ -72,9 +74,9 @@ impl Input {
         *yaw -= (self.mouse_delta.0 as f64 * sensitivity as f64).to_radians();
         *pitch -= (self.mouse_delta.1 as f64 * sensitivity as f64).to_radians();
         // Optional: clamp pitch so camera doesn’t flip
-        *pitch = pitch.clamp(-1.5533, 1.5533); // ±89 degrees in radians
+        *pitch = pitch.clamp(-1.570, 1.570); // ±89 degrees in radians
     }
-    pub fn update(&mut self, event_pump: &mut sdl2::EventPump) -> bool {
+    pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
         for event in event_pump.poll_iter() {
@@ -91,7 +93,21 @@ impl Input {
                 Event::MouseMotion { xrel, yrel, .. } => {
                     self.mouse_delta = (xrel, yrel);
                 },
-                _ => {},
+                sdl2::event::Event::Window { win_event, .. } => {
+                    match win_event {
+                        sdl2::event::WindowEvent::Resized(w, h) |
+                        sdl2::event::WindowEvent::SizeChanged(w, h) => {
+                            unsafe {
+                                gl::Viewport(0, 0, w, h);
+                            }
+                            let projection = glam::Mat4::perspective_rh_gl(renderer.fov.to_radians(), w as f32 / h as f32, renderer.near_plane, renderer.far_plane);
+                            renderer.true_set_projection(projection);
+                        }
+                        _ => {}
+
+                    }
+                }
+            _ => {},
             }
         }
         running
@@ -110,4 +126,3 @@ impl Index<Scancode> for Input {
         }
     }
 }
-
