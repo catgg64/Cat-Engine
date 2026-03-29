@@ -431,10 +431,10 @@ impl Renderer {
     //! Used for Rendering.
 
     pub fn new(screen_width: u32, screen_height: u32, fov: f32, near_plane: f32, far_plane: f32) -> Self {
-        let texture_shader = Shader::new(format!("{}, texture.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, texture.frag", env!("CARGO_MANIFEST_DIR")).as_str());
-        let triangle_shader = Shader::new(format!("{}, triangle.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, triangle.frag", env!("CARGO_MANIFEST_DIR")).as_str());
-        let triangle3d_shader = Shader::new(format!("{}, triangle3d.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, triangle3d.frag", env!("CARGO_MANIFEST_DIR")).as_str());
-        let test_shader = Shader::new(format!("{}, opengltest.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}, opengltest.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let texture_shader = Shader::new(format!("{}/texture.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/texture.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let triangle_shader = Shader::new(format!("{}/triangle.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/triangle.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let triangle3d_shader = Shader::new(format!("{}/triangle3d.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/triangle3d.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let test_shader = Shader::new(format!("{}/opengltest.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/opengltest.frag", env!("CARGO_MANIFEST_DIR")).as_str());
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
         let (sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
@@ -469,8 +469,10 @@ impl Renderer {
     /// ```ignore
     /// let catengine = CatEngine::new("Surface", 800, 800, vec![]);
     /// let surface = Surface::from_texture("mel.png");
-    /// catengine.renderer.blit(surface, 20.0, 20.0, 100.0, 100.0);
-    /// // Most values here are arbitrary.
+    /// while catengine.running {
+    ///     catengine.renderer.blit(surface, 20.0, 20.0, 100.0, 100.0);
+    ///     // Most values here are arbitrary.
+    /// }
     /// ```
     pub fn blit(&mut self, surface: & Surface, pos_x: f32, pos_y: f32, width: f32, height: f32) {
         let vertices = vec![
@@ -507,10 +509,13 @@ impl Renderer {
     /// 
     /// # Examples
     /// ```ignore
-    /// let catengine = CatEngine::new("Surface", 800, 800, vec![]);
-    /// let surface = TileSet::from_texture("atlas.png");
-    /// catengine.renderer.blit(surface, 20.0, 20.0, 100.0, 100.0);
-    /// // Most values here are arbitrary.
+    /// let catengine = CatEngine::new("TileSet", 800, 800, vec![]);
+    /// let atlas = TileSet::from_texture("atlas.png");
+    /// let tile_1 = atlas.simple_append_tile(0, 0, 16, 16)
+    /// while catengine.running {
+    ///     catengine.renderer.draw_tileset(tile_1, &mut atlas, 20.0, 20.0);
+    ///     // Most values here are arbitrary.
+    /// }
     /// ```
     pub fn draw_tileset(&mut self, tile: u32, tile_set: &mut surface::TileSet, x: f32, y: f32) {
         let used_tile = &tile_set.tile_list[tile as usize];
@@ -544,6 +549,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a triangle.
     pub fn draw_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D,  surface: &mut Surface, uvs: Vec<Coordinate2D>) {
         let vertices = vec![p1, p2, p3];
 
@@ -565,6 +571,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a "opengl triangle", with every vertex having their own color. Mostly used for testing.
     pub fn draw_test_opengl_triangle(&mut self, p1: Coordinate2D, p2: Coordinate2D, p3: Coordinate2D) {
         let mut vertices: Vec<Coordinate2D> = Vec::new();
         vertices.push(p1.return_into_gl_coordinates(self.screen_width, self.screen_height));
@@ -609,6 +616,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a triangle in 3D.
     pub fn draw_3d_triangle(&mut self, p1: Coordinate3D, p2: Coordinate3D, p3: Coordinate3D, surface: &mut Surface, uvs: Vec<Coordinate2D>, view: Mat4) {
         let model = Mat4::from_scale_rotation_translation(
         glam::Vec3::new(5.0, 5.0, 5.0), // scale up to match cubes
@@ -643,6 +651,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a mesh.
     pub fn draw_mesh(&mut self, pos_x: f32, pos_y: f32, pos_z: f32, mesh: &mut Mesh, view: &Mat4) {
         let model = Mat4::from_scale_rotation_translation(
             glam::Vec3::new(5.0, 5.0, 5.0),
@@ -667,6 +676,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a "complex" sprite list. It's faster than a regular sprite list, but it is simpler and has better support for now.
     pub fn draw_complex_sprite_list(&mut self, sprite_list: &mut ComplexSpriteList, offset_x: f32, offset_y: f32) {
         let mut vertices = vec![];
         #[rustfmt::skip]
@@ -721,6 +731,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a SpriteList.
     pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
         sprite_list.sort_by_z();
 
@@ -742,6 +753,7 @@ impl Renderer {
         }
     }
 
+    /// Draws a font.
     pub fn draw_font(&mut self, font: &Font, text: &str, x: f32, y: f32, size: f32) {
         let mut vertices: Vec<Coordinate2D> = vec![];
         #[rustfmt::skip]

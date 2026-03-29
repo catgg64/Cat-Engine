@@ -9,6 +9,11 @@ pub struct Surface {
 }
 
 impl Surface {
+    //! # Surface
+    //! 
+    //! Often used for images.
+    
+    /// Start off a brand new, empty surface.
     pub fn new(width: usize, height: usize) -> Self {
         let mut data = vec![0u8; width * height * 4];
 
@@ -43,6 +48,7 @@ impl Surface {
         Self { texture_id, width: width as u32, height: height as u32, corners, data }
     }
 
+    /// Starts a surface from a texture.
     pub fn from_texture(path: &str) -> Self {
         let image = image::open(path).expect("Error loading the image: ");
         let image = image.into_rgba8();
@@ -86,6 +92,7 @@ impl Surface {
         }
     }
 
+    /// Blits a Surface on top of itself.
     pub fn blit(&mut self, surface: &Surface, x_offset: u32, y_offset: u32) {
         for y in 0..surface.height as usize {
             for x in 0..surface.width as usize {

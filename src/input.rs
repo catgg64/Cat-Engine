@@ -31,10 +31,13 @@ impl Input {
         self.pressed.remove(&key);
     }
 
+    /// Checks if a key is down. Should be used with the keyboard module.
     pub fn is_down(&self, key: Scancode) -> bool {
         self.pressed.contains(&key)
     }
 
+    /// Returns a HashMap with the buttons and if they are pressed or not.
+    /// The values are: "left", "middle", "right", "x1" and "x2".
     pub fn mouse_buttons_down(&self, event_pump: &mut sdl2::EventPump) -> HashMap<&str, bool> {
         let mut pressed = HashMap::new();
         pressed.insert("left", event_pump.mouse_state().left());
@@ -45,10 +48,12 @@ impl Input {
         pressed
     }
 
+    /// Gets the mouse's position
     pub fn get_mouse_pos(&self, event_pump: &mut sdl2::EventPump) -> (i32, i32) {
         (event_pump.mouse_state().x(), event_pump.mouse_state().y())
     }
 
+    /// Sets a relative mouse position, often used for 3D games to control pitch and yaw.
     pub fn set_relative_mouse_position(&self) {
         self.mouse_util.set_relative_mouse_mode(true);
     }
@@ -61,10 +66,12 @@ impl Input {
         self.mouse_util.warp_mouse_in_window(window, position.0 as i32, position.1 as i32);
     }
 
+    /// Gets the mouse's position after the last tick. Often combined with set_relative_mouse_position.
     pub fn get_mouse_delta(&self) -> (i32, i32) {
         self.mouse_delta
     }
 
+    /// Updates the Yaw and Pitch. Used in 3D games.
     pub fn update_yaw_and_pitch(
         &self,
         sensitivity: f32,
@@ -76,6 +83,7 @@ impl Input {
         // Optional: clamp pitch so camera doesn’t flip
         *pitch = pitch.clamp(-1.570, 1.570); // ±89 degrees in radians
     }
+    
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
