@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use sdl2::keyboard::Keycode;
 use sdl2::{ Sdl, event::Event, keyboard::Scancode };
 use std::ops::Index;
 use sdl2::mouse::MouseUtil;
@@ -9,6 +10,7 @@ use crate::video::Renderer;
 
 pub struct Input {
     pressed: HashSet<Scancode>,
+    pressed_keycode: HashSet<Keycode>,
     mouse_util: MouseUtil,
     mouse_delta: (i32, i32),
 }
@@ -18,6 +20,7 @@ impl Input {
         let mouse_util = sdl_context.mouse();
         Self {
             pressed: HashSet::new(),
+            pressed_keycode: HashSet::new(),
             mouse_util,
             mouse_delta: (0, 0),
         }
@@ -31,9 +34,21 @@ impl Input {
         self.pressed.remove(&key);
     }
 
+    pub fn press_keycode(&mut self, key: Keycode) {
+        self.pressed_keycode.insert(key);
+    }
+
+    pub fn release_keycode(&mut self, key: Keycode) {
+        self.pressed_keycode.remove(&key);
+    }
+
     /// Checks if a key is down. Should be used with the keyboard module.
     pub fn is_down(&self, key: Scancode) -> bool {
         self.pressed.contains(&key)
+    }
+
+    pub fn is_down_keycode(&self, key: Keycode) -> bool {
+        self.pressed_keycode.contains(&key)
     }
 
     /// Returns a HashMap with the buttons and if they are pressed or not.
@@ -92,11 +107,13 @@ impl Input {
                 Event::Quit {..} => {
                     running = false
                 },
-                Event::KeyDown { scancode: Some(key), .. } => {
+                Event::KeyDown { scancode: Some(key), keycode: Some(key_keycode), .. } => {
                     self.press(key);
+                    self.press_keycode(key_keycode);
                 },
-                Event::KeyUp { scancode: Some(key), .. } => {
+                Event::KeyUp { scancode: Some(key), keycode: Some(key_keycode), .. } => {
                     self.release(key);
+                    self.press_keycode(key_keycode);
                 },
                 Event::MouseMotion { xrel, yrel, .. } => {
                     self.mouse_delta = (xrel, yrel);

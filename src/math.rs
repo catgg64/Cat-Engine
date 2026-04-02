@@ -71,3 +71,9 @@ pub fn pixels_to_uv(
         y / tex_height as f32,
     )
 }
+
+impl Clone for Coordinate3D {
+    fn clone(&self) -> Self {
+        Self(self.0, self.1, self.2)
+    }
+}

@@ -1,8 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![allow(warnings)]
 
 use glam::Mat4;
 
-use crate::video::Renderer;
+#[cfg(feature = "python")]
+use crate::{python::{PyCoordinate2D, PySpriteList, PyTile, PyTileSet}};
+use crate::{video::Renderer};
 
 pub mod pixel;
 pub mod video;
@@ -69,21 +72,26 @@ impl CatEngine {
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
             if flags.contains(&CatEngineFlag::DepthBuffer) {
-                gl::Disable(gl::DEPTH_TEST);
+                gl::Enable(gl::DEPTH_TEST);
+                println!("depth buffer on!");
             }
             gl::Enable(gl::BLEND);
             gl::Disable(gl::CULL_FACE);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
 
+        video_subsystem.gl_set_swap_interval(0); // vsync OFF
+
         if flags.contains(&CatEngineFlag::DynamicVsync) {
             video_subsystem.gl_set_swap_interval(-1).unwrap_or_else(|_| {
                 video_subsystem.gl_set_swap_interval(1).unwrap();
             });
+            println!("has dynamic vsync")
         }
 
         if flags.contains(&CatEngineFlag::Vsync) {
             video_subsystem.gl_set_swap_interval(1).unwrap();
+            println!("has regular vsync")
         }
 
         let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
@@ -207,4 +215,24 @@ pub mod opengl {
 pub mod sdl {
     /// Raw binding of sdl.
     pub use sdl2::*;
+}
+
+#[cfg(feature = "python")]
+mod python;
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+#[cfg(feature = "python")]
+use python::{ PyCatEngine, PySurface };
+
+#[cfg(feature = "python")]
+#[pymodule]
+fn catengine(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyCatEngine>()?;
+    m.add_class::<PySurface>()?;
+    m.add_class::<PyCoordinate2D>()?;
+    m.add_class::<PyTileSet>()?;
+    m.add_class::<PyTile>()?;
+    m.add_class::<PySpriteList>()?;
+    Ok(())
 }

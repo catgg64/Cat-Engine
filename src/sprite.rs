@@ -61,7 +61,7 @@ impl<'a> ComplexSpriteList<'a> {
 }
 
 pub enum Sprite {
-    Surface(f32, f32, f32, f32, f32, Rc<Surface>, CatEngineShader, bool),
+    Surface(f32, f32, f32, Rc<RefCell<Surface>>, CatEngineShader, bool),
     Tile(f32, f32, f32, Rc<RefCell<TileSet>>, u32, CatEngineShader, bool),
 }
 
@@ -69,49 +69,49 @@ pub enum Sprite {
 impl Sprite {
     pub fn get_x(&self) -> f32 {
         match self {
-            Sprite::Surface(x, _, _, _, _, _, _, _) => *x,
+            Sprite::Surface(x, _, _, _, _, _) => *x,
             Sprite::Tile(x, _, _, _, _, _, _) => *x,
         }
     }
     
     pub fn get_y(&self) -> f32 {
         match self {
-            Sprite::Surface(_, y, _, _, _, _, _, _) => *y,
+            Sprite::Surface(_, y, _, _, _, _,) => *y,
             Sprite::Tile(_, y, _, _, _, _, _) => *y,
         }
     }
 
     pub fn get_z(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, z, _, _, _, _, _) => *z,
+            Sprite::Surface(_, _, z, _, _, _) => *z,
             Sprite::Tile(_, _, z, _, _, _, _) => *z,
         }
     }
 
     pub fn get_width(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, _, width, _, _, _, _) => *width,
+            Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().width as f32,
             Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_width as f32,
         }
     }
     
     pub fn get_height(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, _, _, height, _, _, _) => *height,
+            Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().height as f32,
             Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_height as f32,
         }
     }
 
     pub fn get_ysort(&self) -> bool {
         match self {
-            Sprite::Surface(_, _, _, _, _, _, _, ysort) => *ysort,
+            Sprite::Surface(_, _, _, _, _, ysort) => *ysort,
             Sprite::Tile(_, _, _, _, _, _, ysort) => *ysort,
         }
     }
 
     pub fn set_z(&mut self, z: f32) {
         match self {
-            Sprite::Surface(_, _, t, _, _, _, _, _) => *t = z,
+            Sprite::Surface(_, _, t, _, _, _) => *t = z,
             Sprite::Tile(_, _, t, _, _, _, _) => *t = z,
         }
     }

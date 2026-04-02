@@ -11,3 +11,10 @@ sdl2 = { version = "0.36", features = ["bundled"] }
 image = "0.24"
 gl = "0.14"
 glam = "0.25"
+pyo3 = { version = "0.21", features = ["extension-module"], optional = true }
+
+[env]
+PYO3_USE_ABI3_FORWARD_COMPATIBILITY = "1"
+
+[features]
+python = ["pyo3"]

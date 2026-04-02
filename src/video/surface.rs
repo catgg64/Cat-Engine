@@ -1,10 +1,11 @@
-use crate::math::Coordinate2D;
+use crate::math::{ Coordinate2D, Coordinate3D };
 
 pub struct Surface {
     pub texture_id: u32,
     pub width: u32,
     pub height: u32,
     pub corners:  [Coordinate2D; 4],
+    pub vertices: [Coordinate3D; 4],
     pub data: Vec<u8>,
 }
 
@@ -45,7 +46,39 @@ impl Surface {
             Coordinate2D(0.0, 1.0),
         ];
 
-        Self { texture_id, width: width as u32, height: height as u32, corners, data }
+        let mut vertices = [
+            Coordinate3D(0.0, 0.0, 0.0),
+            Coordinate3D(width as f32, 0.0, 0.0),
+            Coordinate3D(width as f32, height as f32, 0.0),
+            Coordinate3D(0.0, height as f32, 0.0),
+        ];
+
+        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data }
+    }
+
+    pub fn from_width_height_verticies_data(width: usize, vertices: [Coordinate3D; 4], corners: [Coordinate2D; 4], data: Vec<u8>, height: usize) -> Self {
+        let mut texture_id = 0;
+        
+        unsafe {
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+            gl::GenTextures(1, &mut texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+            gl::TexImage2D(gl::TEXTURE_2D,
+                           0,
+                           gl::RGBA as i32,
+                           width as i32,
+                           height as i32,
+                           0,
+                           gl::RGBA,
+                           gl::UNSIGNED_BYTE,
+                           data.as_ptr() as *const _);
+        }
+
+        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data }
     }
 
     /// Starts a surface from a texture.
@@ -83,11 +116,19 @@ impl Surface {
             Coordinate2D(0.0, 1.0),
         ];
 
+        let mut vertices = [
+            Coordinate3D(0.0, 0.0, 0.0),
+            Coordinate3D(width as f32, 0.0, 0.0),
+            Coordinate3D(width as f32, height as f32, 0.0),
+            Coordinate3D(0.0, height as f32, 0.0),
+        ];
+
         Surface {
             texture_id,
             width,
             height,
             corners,
+            vertices,
             data,
         }
     }
@@ -141,8 +182,20 @@ impl Surface {
     }
 
     pub fn stretch(&mut self, width: u32, height: u32) {
+        self.vertices = [
+            Coordinate3D(0.0, 0.0, self.vertices[0].2),
+            Coordinate3D(width as f32, 0.0, self.vertices[1].2),
+            Coordinate3D(width as f32, height as f32, self.vertices[2].2),
+            Coordinate3D(0.0, height as f32, self.vertices[3].2),
+        ];
         self.width = width;
         self.height = height;
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        for vertex in self.vertices.iter_mut() {
+            vertex.2 = z;
+        }
     }
 
     pub fn flipv(&mut self) {
@@ -198,6 +251,13 @@ impl Drop for Surface {
     }
 }
 
+impl Clone for Surface {
+    fn clone(&self) -> Self {
+        Self::from_width_height_verticies_data(self.width as usize, self.vertices.clone(), self.corners.clone(), self.data.clone(), self.height as usize)
+    }
+}
+
+#[derive(Clone)]
 pub struct Tile {
     pub corners: [Coordinate2D; 4],
     pub vertices: [Coordinate2D; 4],
