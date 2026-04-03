@@ -1,6 +1,6 @@
 [package]
 name = "catengine"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Catgg54 sleepy-furret@proton.me"]
 description = "A simple 2D and 3D engine for rendering ghraphics."
 edition = "2024"
