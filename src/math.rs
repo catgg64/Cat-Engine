@@ -77,3 +77,34 @@ impl Clone for Coordinate3D {
         Self(self.0, self.1, self.2)
     }
 }
+
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+}
+
+impl Rect {
+    pub fn colliderect(&self, rect: &Self) -> bool {
+        if self.x > rect.x
+        && self.y > rect.y
+        && self.x < rect.width + rect.x
+        && self.y < rect.height + rect.y {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn collidepoint(&self, point: &Coordinate2D) -> bool {
+        if self.x < point.0
+        && self.y < point.1
+        && self.width + self.x > point.0
+        && self.height + self.y > point.1 {
+            true
+        } else {
+            false
+        }
+    }
+}

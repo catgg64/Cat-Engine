@@ -10,6 +10,12 @@ pub struct Character {
     pub height: u32,
 }
 
+impl Clone for Character {
+    fn clone(&self) -> Self {
+        Self { crt: self.crt.clone(), x: self.x, y: self.y, width: self.width, height: self.height }
+    }
+}
+
 pub struct Font {
     pub character_list: Vec<Character>,
     pub uvs: HashMap<String, [Coordinate2D; 4]>,

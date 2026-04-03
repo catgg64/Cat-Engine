@@ -1,7 +1,12 @@
 use std::{rc::Rc, cell::{RefCell, Ref}, vec};
 
 use pyo3::prelude::*;
-use crate::{CatEngine, keyboard, math::Coordinate2D, sprite::{Sprite, SpriteList}, video::{Renderer, surface::{self, Surface, Tile, TileSet}}};
+use crate::{CatEngine, keyboard, 
+    math::{Coordinate2D, Coordinate3D, Rect}, 
+    sprite::{Sprite, SpriteList}, 
+    video::{Renderer, 
+        surface::{self, Surface, Tile, TileSet}},
+    font::{ Character, Font }};
 
 #[pyclass(unsendable)]
 pub struct PyCatEngine {
@@ -119,8 +124,8 @@ impl PyCatEngine {
         self.engine.running
     }
 
-    fn blit_surface(&mut self, surface: &PySurface, pos_x: f32, pos_y: f32, pos_z: f32) {
-        self.engine.renderer.blit(&surface.surface.borrow(), pos_x, pos_y, pos_z);
+    fn blit_surface(&mut self, surface: &PySurface, pos_x: f32, pos_y: f32) {
+        self.engine.renderer.blit(&surface.surface.borrow(), pos_x, pos_y);
     }
     
     fn blit_tileset(&mut self, tile: u32, tile_set: &mut PyTileSet, pos_x: f32, pos_y: f32) {
@@ -130,6 +135,10 @@ impl PyCatEngine {
     fn blit_sprite_list(&mut self, sprite_list: &mut PySpriteList, x_offset: f32, y_offset: f32) {
         self.engine.renderer.draw_sprite_list(&mut sprite_list.sprite_list, x_offset, y_offset);
     } 
+
+    fn blit_font(&mut self, font: &PyFont, text: &str, x: f32, y: f32, size: f32) {
+        self.engine.renderer.draw_font(&font.font, text, x, y, size);
+    }
 }
 
 #[pyclass(unsendable)]
@@ -197,6 +206,17 @@ impl Clone for PyCoordinate2D {
 }
 
 #[pyclass(unsendable)]
+#[derive(Debug)]
+pub struct PyCoordinate3D(pub f32, pub f32, pub f32);
+
+impl Clone for PyCoordinate3D {
+    fn clone(&self) -> Self {
+        Self(self.0, self.1, self.2)
+    }
+}
+
+
+#[pyclass(unsendable)]
 pub struct PyTile {
     tile: Tile,
 }
@@ -210,15 +230,15 @@ impl Clone for PyTile {
 #[pymethods]
 impl PyTile {
     #[new]
-    fn new(py: Python, corners: Vec<(f32, f32)>, vertices: Vec<(f32, f32)>, x: u32, y: u32, width: u32, height: u32) -> PyResult<PyTile> {
+    fn new(py: Python, corners: Vec<(f32, f32)>, vertices: Vec<(f32, f32)>, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<PyTile> {
         let corners: Vec<PyCoordinate2D> = corners
             .into_iter()
             .map(|(x, y)| PyCoordinate2D { 0: x, 1: y })
             .collect();
 
-        let vertices: Vec<PyCoordinate2D> = vertices
+        let vertices: Vec<PyCoordinate3D> = vertices
             .into_iter()
-            .map(|(x, y)| PyCoordinate2D { 0: x, 1: y })
+            .map(|(x, y)| PyCoordinate3D { 0: x, 1: y, 2: z })
             .collect();
         
         if corners.len() != 4 || vertices.len() != 4 {
@@ -228,11 +248,11 @@ impl PyTile {
         }
 
         let corners: [PyCoordinate2D; 4] = corners.try_into().unwrap();
-        let vertices: [PyCoordinate2D; 4] = vertices.try_into().unwrap();
+        let vertices: [PyCoordinate3D; 4] = vertices.try_into().unwrap();
 
 
         Ok(Self {
-            tile: Tile::new(corners.map(|x| Coordinate2D{ 0: x.0, 1: x.1}), vertices.map(|x| Coordinate2D{ 0: x.0, 1: x.1}), x, y, width, height)
+            tile: Tile::new(corners.map(|x| Coordinate2D{ 0: x.0, 1: x.1}), vertices.map(|x| Coordinate3D{ 0: x.0, 1: x.1, 2: x.2}), x, y, width, height)
             }
         )
     }
@@ -257,8 +277,8 @@ impl PyTileSet {
         })
     }
 
-    fn simple_append_tile(&mut self, x: u32, y: u32, width: u32, height: u32) -> PyResult<u32> {
-        Ok(self.tile_set.borrow_mut().simple_append_tile(x, y, width, height))
+    fn simple_append_tile(&mut self, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<u32> {
+        Ok(self.tile_set.borrow_mut().simple_append_tile(x, y, z, width, height))
     }
 
     fn blit(&mut self, surface: &PySurface, offset_x: u32, offset_y: u32) {
@@ -298,5 +318,61 @@ impl PySpriteList {
     fn update(&mut self) {
         self.sprite_list.update(std::mem::take(&mut self.true_sprite_list));
         self.true_sprite_list = vec![];
+    }
+}
+
+#[pyclass(unsendable)]
+pub struct PyCharacter {
+    character: Character,
+}
+
+#[pymethods]
+impl PyCharacter {
+    #[new]
+    fn new(chr: String, x: u32, y: u32, width: u32, height: u32) -> Self {
+        PyCharacter{ character: Character{ crt: chr, x, y, width, height } }
+    }
+}
+
+#[pyclass(unsendable)]
+pub struct PyFont {
+    font: Font,
+}
+
+#[pymethods]
+impl PyFont {
+    #[new]
+    fn new(py: Python, path: &str, character_list: Vec<Py<PyCharacter>>) -> Self {
+        let mut chars = vec![];
+
+        for ch in character_list {
+            let borrowed = ch.borrow(py);
+            chars.push(borrowed.character.clone());
+        }
+
+        Self {
+            font: Font::new(path, chars)
+        }
+    }
+}
+
+#[pyclass(unsendable)]
+pub struct PyRect {
+    pub rect: Rect
+}
+
+#[pymethods]
+impl PyRect {
+    #[new]
+    fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        Self{rect: Rect{ x, y, width, height }}
+    }
+
+    fn colliderect(&self, rect: &Self) -> PyResult<bool> {
+        Ok(self.rect.colliderect(&rect.rect))
+    }
+
+    fn collidepoint(&self, point: &PyCoordinate2D) -> PyResult<bool> {
+        Ok(self.rect.collidepoint(&Coordinate2D{ 0: point.0, 1: point.1 }))
     }
 }

@@ -672,9 +672,10 @@ impl Renderer {
         }
     }
 
-    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(u32, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32) {
+    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(u32, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32, screen_width: u32, screen_height: u32) {
         let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
-        
+        let borrowed_tileset = tile_set.borrow();
+
         let mut vertices = vec![];
         #[rustfmt::skip]
         let mut indicies: Vec<u32> = vec![];
@@ -682,28 +683,40 @@ impl Renderer {
         let mut current_sprite = 0;
         
         for tile in &tiles {
-            uvs.push(tile_set.borrow().tile_list[tile.0.to_owned() as usize].corners[0].clone());
-            uvs.push(tile_set.borrow().tile_list[tile.0.to_owned() as usize].corners[1].clone());
-            uvs.push(tile_set.borrow().tile_list[tile.0.to_owned() as usize].corners[2].clone());
-            uvs.push(tile_set.borrow().tile_list[tile.0.to_owned() as usize].corners[3].clone());
-            if tile.3 {
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-            } else {
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[0].2));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[1].2));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[2].2));
-                vertices.push(Coordinate3D(tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, tile_set.borrow().tile_list[tile.0.to_owned() as usize].vertices[3].2));
+            let x = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1;
+            let y = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2;
+            let width = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1;
+            let height = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2;
+            let width_2 = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1 / 2.0;
+            let height_2 = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2 / 2.0;
+            if x + width_2 * 2.0 - offset_x > 0.0 
+            && x - offset_x < self.screen_width as f32 
+            && y + height_2 * 2.0 - offset_y > 0.0 
+            && y - offset_y < self.screen_height as f32
+            {
+                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[0].clone());
+                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[1].clone());
+                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[2].clone());
+                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[3].clone());
+                if tile.3 {
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
+                } else {
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].2));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].2));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].2));
+                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].2));
+                }
+                indicies.push(current_sprite);
+                indicies.push(current_sprite + 1);
+                indicies.push(current_sprite + 2);
+                indicies.push(current_sprite);
+                indicies.push(current_sprite + 2);
+                indicies.push(current_sprite + 3);
+                current_sprite += 4;
             }
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 1);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite + 3);
-            current_sprite += 4;
         }
 
         independent_update_uv_element_array_3d(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices, uvs, &indicies);
@@ -714,7 +727,7 @@ impl Renderer {
             self.texture_shader.set_mat4("model", model.to_cols_array());
             self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
             gl::ActiveTexture(gl::TEXTURE0);
-            tile_set.borrow().surface.bind();
+            borrowed_tileset.surface.bind();
             gl::BindVertexArray(self.texture_vao);
             gl::DrawElements(gl::TRIANGLES, indicies.len() as i32, gl::UNSIGNED_INT, std::ptr::null());
         }
@@ -904,25 +917,64 @@ impl Renderer {
 
     /// Draws a SpriteList.
     pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
-        //sprite_list.sort_by_z();
+        use std::collections::HashMap;
+        use std::rc::Rc;
+        use std::cell::RefCell;
 
+        let mut tile_batches: HashMap<
+            *const std::cell::RefCell<surface::TileSet>,
+            (Rc<RefCell<surface::TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
+        > = HashMap::new();
         for sprite in &sprite_list.sprite_list {
-            if sprite.get_x() + sprite.get_width() * 2.0 - offset_x > 0.0 
-            && sprite.get_x() - offset_x < self.screen_width as f32 
-            && sprite.get_y() + sprite.get_height() * 2.0 - offset_y > 0.0 
-            && sprite.get_y() - offset_y < self.screen_height as f32 {
-                match sprite {
-                    Sprite::Surface(x, y, z, surface, shader, ysort) => {
-                        surface.borrow_mut().set_z(z.to_owned());
-                        self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
-                    }
+            let x = sprite.get_x();
+            let y = sprite.get_y();
+            let width = sprite.get_width();
+            let height = sprite.get_height();
 
-                    Sprite::Tile(x, y, z, tile_set, tile, shader, ysort) => {
-                        tile_set.borrow_mut().set_tile_z(tile.to_owned(), z.to_owned());
-                        self.draw_tileset(*tile, &mut tile_set.borrow_mut(), *x - offset_x, *y - offset_y);
-                    }
+            // CULLING (same as yours)
+            if !(x + width * 2.0 - offset_x > 0.0 
+            && x - offset_x < self.screen_width as f32 
+            && (y + height) * 2.0 - offset_y > 0.0 
+            && y - offset_y < self.screen_height as f32)
+            || !sprite.is_not_batch() {
+                continue;
+            }
+
+            match sprite {
+                // Surfaces → draw immediately
+                Sprite::Surface(x, y, z, surface, _, _) => {
+                    surface.borrow_mut().set_z(*z);
+                    self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
+                }
+
+                // Tiles → batch them
+                Sprite::Tile(x, y, z, tile_set, tile, _, ysort) => {
+                    let key = std::rc::Rc::as_ptr(tile_set);
+
+                    let entry = tile_batches.entry(key).or_insert((
+                        tile_set.clone(),
+                        Vec::new()
+                    ));
+
+                    entry.1.push((
+                        *tile,
+                        *x - offset_x,
+                        *y - offset_y,
+                        *ysort,
+                        *z
+                    ));
+                }
+
+                // already batched
+                Sprite::Batch(tile_set, tile_list) => {
+                    self.draw_tile_list(tile_set.clone(), tile_list.clone(), offset_x, offset_y, self.screen_width, self.screen_height);
                 }
             }
+        }
+
+        // DRAW ALL BATCHES
+        for (_, (tile_set, tiles)) in tile_batches {
+            self.draw_tile_list(tile_set, tiles, 0.0, 0.0, self.screen_width, self.screen_height);
         }
     }
 

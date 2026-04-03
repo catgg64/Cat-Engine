@@ -352,3 +352,12 @@ impl TileSet {
     }
 }
 
+impl PartialEq for TileSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.surface.texture_id == other.surface.texture_id
+    }
+    
+    fn ne(&self, other: &Self) -> bool {
+        self.surface.texture_id != other.surface.texture_id
+    }
+}

@@ -1,3 +1,4 @@
+use crate::math::Coordinate3D;
 use crate::{CatEngine, sprite};
 use crate::video::surface::{ TileSet, Tile };
 use crate::video::surface::Surface;
@@ -63,6 +64,7 @@ impl<'a> ComplexSpriteList<'a> {
 pub enum Sprite {
     Surface(f32, f32, f32, Rc<RefCell<Surface>>, CatEngineShader, bool),
     Tile(f32, f32, f32, Rc<RefCell<TileSet>>, u32, CatEngineShader, bool),
+    Batch(Rc<RefCell<TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
 }
 
 
@@ -71,6 +73,33 @@ impl Sprite {
         match self {
             Sprite::Surface(x, _, _, _, _, _) => *x,
             Sprite::Tile(x, _, _, _, _, _, _) => *x,
+            Sprite::Batch(tile_set, tiles) => {
+                let mut lowest: f32 = 0.0;
+                let mut vertices: Vec<Coordinate3D> = vec![];
+                let borrowed_tileset = tile_set.borrow();
+
+                for tile in tiles.iter() {
+                    if tile.3 {
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
+                    } else {
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].2));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].2));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].2));
+                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].2));
+                    }
+                }
+
+                for vertex in vertices.iter() {
+                    if vertex.0 < lowest {
+                        lowest = vertex.0
+                    };
+                }
+
+                lowest
+            },
         }
     }
     
@@ -78,6 +107,7 @@ impl Sprite {
         match self {
             Sprite::Surface(_, y, _, _, _, _,) => *y,
             Sprite::Tile(_, y, _, _, _, _, _) => *y,
+            Sprite::Batch(_, _) => {0.0},
         }
     }
 
@@ -85,6 +115,7 @@ impl Sprite {
         match self {
             Sprite::Surface(_, _, z, _, _, _) => *z,
             Sprite::Tile(_, _, z, _, _, _, _) => *z,
+            Sprite::Batch(_, _) => {0.0},
         }
     }
 
@@ -92,6 +123,7 @@ impl Sprite {
         match self {
             Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().width as f32,
             Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_width as f32,
+            Sprite::Batch(_, _) => {0.0},
         }
     }
     
@@ -99,6 +131,7 @@ impl Sprite {
         match self {
             Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().height as f32,
             Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_height as f32,
+            Sprite::Batch(_, _) => {0.0},
         }
     }
 
@@ -106,6 +139,7 @@ impl Sprite {
         match self {
             Sprite::Surface(_, _, _, _, _, ysort) => *ysort,
             Sprite::Tile(_, _, _, _, _, _, ysort) => *ysort,
+            Sprite::Batch(_, _) => {false},
         }
     }
 
@@ -113,6 +147,15 @@ impl Sprite {
         match self {
             Sprite::Surface(_, _, t, _, _, _) => *t = z,
             Sprite::Tile(_, _, t, _, _, _, _) => *t = z,
+            Sprite::Batch(_, _) => {},
+        }
+    }
+
+    pub fn is_not_batch(& self) -> bool {
+        match self {
+            Sprite::Surface(_, _, _, _, _, _) => true,
+            Sprite::Tile(_, _, _, _, _, _, _) => true,
+            Sprite::Batch(_, _) => {false},
         }
     }
 }
