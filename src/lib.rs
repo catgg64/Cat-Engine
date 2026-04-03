@@ -4,7 +4,7 @@
 use glam::Mat4;
 
 #[cfg(feature = "python")]
-use crate::{python::{PyCoordinate2D, PySpriteList, PyTile, PyTileSet}};
+use crate::{python::*};
 use crate::{video::Renderer};
 
 pub mod pixel;
@@ -74,7 +74,6 @@ impl CatEngine {
             if flags.contains(&CatEngineFlag::DepthBuffer) {
                 gl::Enable(gl::DEPTH_TEST);
                 gl::DepthFunc(gl::LESS);
-                println!("depth buffer on!");
             }
             gl::Enable(gl::BLEND);
             gl::Disable(gl::CULL_FACE);
@@ -87,12 +86,10 @@ impl CatEngine {
             video_subsystem.gl_set_swap_interval(-1).unwrap_or_else(|_| {
                 video_subsystem.gl_set_swap_interval(1).unwrap();
             });
-            println!("has dynamic vsync")
         }
 
         if flags.contains(&CatEngineFlag::Vsync) {
             video_subsystem.gl_set_swap_interval(1).unwrap();
-            println!("has regular vsync")
         }
 
         let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
@@ -235,5 +232,8 @@ fn catengine(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyTileSet>()?;
     m.add_class::<PyTile>()?;
     m.add_class::<PySpriteList>()?;
+    m.add_class::<PyCharacter>()?;
+    m.add_class::<PyFont>()?;
+    m.add_class::<PyRect>()?;
     Ok(())
 }

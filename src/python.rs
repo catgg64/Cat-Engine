@@ -358,21 +358,42 @@ impl PyFont {
 
 #[pyclass(unsendable)]
 pub struct PyRect {
-    pub rect: Rect
+    #[pyo3(get, set)]
+    pub x: f32,
+    #[pyo3(get, set)]
+    pub y: f32,
+    #[pyo3(get, set)]
+    pub width: f32,
+    #[pyo3(get, set)]
+    pub height: f32,
 }
 
 #[pymethods]
 impl PyRect {
     #[new]
-    fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self{rect: Rect{ x, y, width, height }}
+    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        Self{ x, y, width, height }
     }
 
-    fn colliderect(&self, rect: &Self) -> PyResult<bool> {
-        Ok(self.rect.colliderect(&rect.rect))
+    pub fn colliderect(&self, rect: &Self) -> PyResult<bool> {
+        if self.x > rect.x
+        && self.y > rect.y
+        && self.x < rect.width + rect.x
+        && self.y < rect.height + rect.y {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
-    fn collidepoint(&self, point: &PyCoordinate2D) -> PyResult<bool> {
-        Ok(self.rect.collidepoint(&Coordinate2D{ 0: point.0, 1: point.1 }))
+    pub fn collidepoint(&self, point: &PyCoordinate2D) -> PyResult<bool> {
+        if self.x < point.0
+        && self.y < point.1
+        && self.width + self.x > point.0
+        && self.height + self.y > point.1 {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }
