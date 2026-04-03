@@ -376,10 +376,10 @@ impl PyRect {
     }
 
     pub fn colliderect(&self, rect: &Self) -> PyResult<bool> {
-        if self.x > rect.x
-        && self.y > rect.y
-        && self.x < rect.width + rect.x
-        && self.y < rect.height + rect.y {
+        if self.x + self.width > rect.x
+        && self.x < rect.x + rect.width
+        && self.y + self.height > rect.y 
+        && self.y < rect.y + rect.height {
             Ok(true)
         } else {
             Ok(false)
