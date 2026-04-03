@@ -922,60 +922,60 @@ impl Renderer {
         use std::cell::RefCell;
 
         let mut tile_batches: HashMap<
-            *const std::cell::RefCell<surface::TileSet>,
-            (Rc<RefCell<surface::TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
+        *const std::cell::RefCell<surface::TileSet>,
+        (Rc<RefCell<surface::TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
         > = HashMap::new();
         for sprite in &sprite_list.sprite_list {
             let x = sprite.get_x();
             let y = sprite.get_y();
             let width = sprite.get_width();
             let height = sprite.get_height();
-
+            
             // CULLING (same as yours)
             if !(x + width * 2.0 - offset_x > 0.0 
-            && x - offset_x < self.screen_width as f32 
-            && (y + height) * 2.0 - offset_y > 0.0 
-            && y - offset_y < self.screen_height as f32)
-            || !sprite.is_not_batch() {
-                continue;
+                && x - offset_x < self.screen_width as f32 
+                && (y + height) * 2.0 - offset_y > 0.0 
+                && y - offset_y < self.screen_height as f32)
+                || !sprite.is_not_batch() {
+                    continue;
+                }
+                
+                match sprite {
+                    // Surfaces → draw immediately
+                    Sprite::Surface(x, y, z, surface, _, _) => {
+                        surface.borrow_mut().set_z(*z);
+                        self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
+                    }
+                    
+                    // Tiles → batch them
+                    Sprite::Tile(x, y, z, tile_set, tile, _, ysort) => {
+                        let key = std::rc::Rc::as_ptr(tile_set);
+                        
+                        let entry = tile_batches.entry(key).or_insert((
+                            tile_set.clone(),
+                            Vec::new()
+                        ));
+                        
+                        entry.1.push((
+                            *tile,
+                            *x - offset_x,
+                            *y - offset_y,
+                            *ysort,
+                            *z
+                        ));
+                    }
+                    
+                    // already batched
+                    Sprite::Batch(tile_set, tile_list) => {
+                        self.draw_tile_list(tile_set.clone(), tile_list.clone(), offset_x, offset_y, self.screen_width, self.screen_height);
+                    }
+                }
             }
-
-            match sprite {
-                // Surfaces → draw immediately
-                Sprite::Surface(x, y, z, surface, _, _) => {
-                    surface.borrow_mut().set_z(*z);
-                    self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
-                }
-
-                // Tiles → batch them
-                Sprite::Tile(x, y, z, tile_set, tile, _, ysort) => {
-                    let key = std::rc::Rc::as_ptr(tile_set);
-
-                    let entry = tile_batches.entry(key).or_insert((
-                        tile_set.clone(),
-                        Vec::new()
-                    ));
-
-                    entry.1.push((
-                        *tile,
-                        *x - offset_x,
-                        *y - offset_y,
-                        *ysort,
-                        *z
-                    ));
-                }
-
-                // already batched
-                Sprite::Batch(tile_set, tile_list) => {
-                    self.draw_tile_list(tile_set.clone(), tile_list.clone(), offset_x, offset_y, self.screen_width, self.screen_height);
-                }
+            
+            // DRAW ALL BATCHES
+            for (_, (tile_set, tiles)) in tile_batches {
+                self.draw_tile_list(tile_set, tiles, 0.0, 0.0, self.screen_width, self.screen_height);
             }
-        }
-
-        // DRAW ALL BATCHES
-        for (_, (tile_set, tiles)) in tile_batches {
-            self.draw_tile_list(tile_set, tiles, 0.0, 0.0, self.screen_width, self.screen_height);
-        }
     }
 
     /// Draws a font.

@@ -75,7 +75,7 @@ impl CatEngine {
                 gl::Enable(gl::DEPTH_TEST);
                 gl::DepthFunc(gl::LESS);
             }
-            gl::Enable(gl::BLEND);
+            gl::Disable(gl::BLEND);
             gl::Disable(gl::CULL_FACE);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
