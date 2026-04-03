@@ -73,6 +73,7 @@ impl CatEngine {
             gl::Viewport(0, 0, width as i32, height as i32);
             if flags.contains(&CatEngineFlag::DepthBuffer) {
                 gl::Enable(gl::DEPTH_TEST);
+                gl::DepthFunc(gl::LESS);
                 println!("depth buffer on!");
             }
             gl::Enable(gl::BLEND);

@@ -17,6 +17,9 @@ pub struct Font {
 }
 
 impl Font {
+    //! # Font
+    //! 
+    //! CatEngine's implementation of a font. Should be feed characters individually, and there is no ttf support yet.
     pub fn new(path: &str, character_list: Vec<Character>) -> Self {
         let mut surface = Surface::from_texture(path);
         let mut uvs: HashMap<String, [Coordinate2D; 4]> = HashMap::new();

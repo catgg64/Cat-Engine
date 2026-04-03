@@ -260,7 +260,7 @@ impl Clone for Surface {
 #[derive(Clone)]
 pub struct Tile {
     pub corners: [Coordinate2D; 4],
-    pub vertices: [Coordinate2D; 4],
+    pub vertices: [Coordinate3D; 4],
     pub x: u32,
     pub y: u32,
     pub width: u32,
@@ -270,7 +270,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate2D; 4], x: u32, y: u32, width: u32, height: u32) -> Self {
+    pub fn new(corners: [Coordinate2D; 4], vertices: [Coordinate3D; 4], x: u32, y: u32, width: u32, height: u32) -> Self {
         let used_corners = [corners[0].clone(), corners[1].clone(), corners[2].clone(), corners[3].clone()];
         let used_vertices = [vertices[0].clone(), vertices[1].clone(), vertices[2].clone(), vertices[3].clone()];
         
@@ -299,7 +299,7 @@ impl TileSet {
         Self { tile_list, surface, width, height }
     }
 
-    pub fn simple_append_tile(&mut self, x: u32, y: u32, width: u32, height: u32) -> u32 {
+    pub fn simple_append_tile(&mut self, x: u32, y: u32, z: f32, width: u32, height: u32) -> u32 {
         self.tile_list.push(
             Tile { corners: [
                 // Nah bru i give up just asking gpt this shi man
@@ -309,10 +309,10 @@ impl TileSet {
                 Coordinate2D(x as f32 / self.surface.width as f32, (y as f32 + height as f32) / self.surface.height as f32),
                 ], 
             vertices: [
-                Coordinate2D(0.0, 0.0),
-                Coordinate2D(width as f32, 0.0),
-                Coordinate2D(width as f32, height as f32),
-                Coordinate2D(0.0, height as f32),
+                Coordinate3D(0.0, 0.0, z),
+                Coordinate3D(width as f32, 0.0, z),
+                Coordinate3D(width as f32, height as f32, z),
+                Coordinate3D(0.0, height as f32, z),
                 ],
             x,
             y,
@@ -336,13 +336,19 @@ impl TileSet {
 
     pub fn stretch_tile(&mut self, tile: u32, width: u32, height: u32) {
         self.tile_list[tile as usize].vertices = [
-            Coordinate2D(0.0, 0.0),
-            Coordinate2D(width as f32, 0.0),
-            Coordinate2D(width as f32, height as f32),
-            Coordinate2D(0.0, height as f32),
+            Coordinate3D(0.0, 0.0, 0.0),
+            Coordinate3D(width as f32, 0.0, 0.0),
+            Coordinate3D(width as f32, height as f32, 0.0),
+            Coordinate3D(0.0, height as f32, 0.0),
         ];
         self.tile_list[tile as usize].visual_width = width as f32;
         self.tile_list[tile as usize].visual_height = height as f32;
+    }
+
+    pub fn set_tile_z(&mut self, tile: u32, z: f32) {
+        for vertex in self.tile_list[tile as usize].vertices.iter_mut() {
+            vertex.2 = z;
+        }
     }
 }
 
