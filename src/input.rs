@@ -53,7 +53,7 @@ impl Input {
 
     /// Returns a HashMap with the buttons and if they are pressed or not.
     /// The values are: "left", "middle", "right", "x1" and "x2".
-    pub fn mouse_buttons_down(&self, event_pump: &mut sdl2::EventPump) -> HashMap<&str, bool> {
+    pub fn mouse_buttons_down(&self, event_pump: &sdl2::EventPump) -> HashMap<&str, bool> {
         let mut pressed = HashMap::new();
         pressed.insert("left", event_pump.mouse_state().left());
         pressed.insert("middle", event_pump.mouse_state().middle());
@@ -64,7 +64,7 @@ impl Input {
     }
 
     /// Gets the mouse's position
-    pub fn get_mouse_pos(&self, event_pump: &mut sdl2::EventPump) -> (i32, i32) {
+    pub fn get_mouse_pos(&self, event_pump: &sdl2::EventPump) -> (i32, i32) {
         (event_pump.mouse_state().x(), event_pump.mouse_state().y())
     }
 

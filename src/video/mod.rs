@@ -2,9 +2,10 @@ use std::ffi::CString;
 use glam::Mat4;
 
 use crate::font::Font;
+use crate::pixel::Color;
 use crate::sprite::{self, ComplexSpriteList, SpriteList, Sprite};
 use crate::video::surface::Surface;
-use crate::math::{ Coordinate2D, Coordinate3D };
+use crate::math::{ Coordinate2D, Coordinate3D, Rect };
 use crate::mesh::{ Mesh };
 
 pub mod surface;
@@ -979,7 +980,7 @@ impl Renderer {
     }
 
     /// Draws a font.
-    pub fn draw_font(&mut self, font: &Font, text: &str, x: f32, y: f32, size: f32) {
+    pub fn draw_font(&mut self, font: &Font, text: &str, x: f32, y: f32, size: f32, spacement: u32) {
         let mut vertices: Vec<Coordinate2D> = vec![];
         #[rustfmt::skip]
         let mut indicies: Vec<u32> = vec![];
@@ -1008,7 +1009,7 @@ impl Renderer {
             vertices.push(Coordinate2D(cursor_x as f32 + w * size, 0.0));
             vertices.push(Coordinate2D(cursor_x as f32 + w * size, h * size));
             vertices.push(Coordinate2D(cursor_x as f32, h * size));
-            cursor_x += glyph.width * size as u32;
+            cursor_x += glyph.width * size as u32 + spacement;
 
             indicies.push(current_sprite);
             indicies.push(current_sprite + 1);
@@ -1023,7 +1024,7 @@ impl Renderer {
         let model = Mat4::from_translation(glam::vec3(x, y, 0.0));
         let lenght = indicies.len() as i32;
 
-        independent_update_uv_element_array_2d(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices.to_vec(), uvs, &self.texture_indexes);
+        independent_update_uv_element_array_2d(&mut self.texture_vao, &mut self.texture_vbo, &mut self.texture_ebo, &mut self.texture_uv_vbo, vertices.to_vec(), uvs, &indicies);
         
         unsafe {
             self.texture_shader.bind();
@@ -1035,6 +1036,60 @@ impl Renderer {
             gl::BindVertexArray(self.texture_vao);
             gl::DrawElements(gl::TRIANGLES, lenght, gl::UNSIGNED_INT, std::ptr::null());
         }
+    }
+
+    pub fn draw_line(&mut self, p1: Coordinate2D, p2: Coordinate2D, color: &Color, width: f32) {
+        let p1 = p1.return_into_gl_coordinates(self.screen_width, self.screen_height);
+        let p2 = p2.return_into_gl_coordinates(self.screen_width, self.screen_height);
+
+        let data: Vec<f32> = vec![
+            // position      // color
+            p1.0, p1.1,     color.r as f32, color.g as f32, color.b as f32,
+            p2.0, p2.1,     color.r as f32, color.g as f32, color.b as f32,
+        ];
+
+        unsafe {
+            gl::LineWidth(width);
+
+            let stride = (5 * std::mem::size_of::<f32>()) as i32;
+
+            gl::BindVertexArray(self.test_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.test_vbo);
+
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (data.len() * std::mem::size_of::<f32>()) as isize,
+                data.as_ptr() as *const _,
+                gl::DYNAMIC_DRAW
+            );
+
+            // position
+            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
+            gl::EnableVertexAttribArray(0);
+
+            // color
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                stride,
+                (2 * std::mem::size_of::<f32>()) as *const _
+            );
+            gl::EnableVertexAttribArray(1);
+
+            self.test_shader.bind();
+            gl::BindVertexArray(self.test_vao);
+
+            gl::DrawArrays(gl::LINES, 0, 2);
+        }
+    }
+
+    pub fn draw_rect(&mut self, rect: &Rect, color: &Color, width: f32) {
+        self.draw_line(Coordinate2D(rect.x, rect.y), Coordinate2D(rect.width + rect.x, rect.y), &color, width);
+        self.draw_line(Coordinate2D(rect.x, rect.y), Coordinate2D(rect.x, rect.height + rect.y), &color, width);
+        self.draw_line(Coordinate2D(rect.width + rect.x, rect.height + rect.y), Coordinate2D(rect.width + rect.x, rect.y), &color, width);
+        self.draw_line(Coordinate2D(rect.width + rect.x, rect.height + rect.y), Coordinate2D(rect.x, rect.height + rect.y), &color, width);
     }
 }
 

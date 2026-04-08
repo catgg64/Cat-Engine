@@ -1,4 +1,4 @@
-use crate::math::{ Coordinate2D, Coordinate3D };
+use crate::math::{ Coordinate2D, Coordinate3D, Rect };
 
 pub struct Surface {
     pub texture_id: u32,
@@ -181,15 +181,15 @@ impl Surface {
         ];
     }
 
-    pub fn stretch(&mut self, width: u32, height: u32) {
+    pub fn stretch(&mut self, width: i32, height: i32) {
         self.vertices = [
             Coordinate3D(0.0, 0.0, self.vertices[0].2),
             Coordinate3D(width as f32, 0.0, self.vertices[1].2),
             Coordinate3D(width as f32, height as f32, self.vertices[2].2),
             Coordinate3D(0.0, height as f32, self.vertices[3].2),
         ];
-        self.width = width;
-        self.height = height;
+        self.width = width as u32;
+        self.height = height as u32;
     }
 
     pub fn set_z(&mut self, z: f32) {
@@ -236,10 +236,14 @@ impl Surface {
         new_surface
     }
 
-    pub fn bind(& self) {
+    pub fn bind(&self) {
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, self.texture_id);
         }
+    }
+
+    pub fn get_rect(&self) -> Rect {
+        Rect { x: 0.0, y: 0.0, width: self.vertices[1].0, height: self.vertices[2].1 }
     }
 }
 
@@ -334,7 +338,7 @@ impl TileSet {
         (self.tile_list.len() - (1 as usize)) as u32
     }
 
-    pub fn stretch_tile(&mut self, tile: u32, width: u32, height: u32) {
+    pub fn stretch_tile(&mut self, tile: u32, width: i32, height: i32) {
         self.tile_list[tile as usize].vertices = [
             Coordinate3D(0.0, 0.0, 0.0),
             Coordinate3D(width as f32, 0.0, 0.0),
@@ -349,6 +353,22 @@ impl TileSet {
         for vertex in self.tile_list[tile as usize].vertices.iter_mut() {
             vertex.2 = z;
         }
+    }
+
+    pub fn flipv_tile(&mut self, tile: u32) {
+        for corner in self.tile_list[tile as usize].corners.iter_mut() {
+            corner.1 = 1.0 - corner.1;
+        }
+    }
+
+    pub fn fliph_tile(&mut self, tile: u32) {
+        for corner in self.tile_list[tile as usize].corners.iter_mut() {
+            corner.0 = 1.0 - corner.1;
+        }
+    }
+    
+    pub fn get_tile_rect(&self, tile: u32) -> Rect {
+        Rect { x: 0.0, y: 0.0, width: self.tile_list[tile as usize].vertices[1].0, height: self.tile_list[tile as usize].vertices[2].1 }
     }
 }
 

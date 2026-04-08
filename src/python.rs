@@ -6,7 +6,9 @@ use crate::{CatEngine, keyboard,
     sprite::{Sprite, SpriteList}, 
     video::{Renderer, 
         surface::{self, Surface, Tile, TileSet}},
-    font::{ Character, Font }};
+    font::{ Character, Font },
+    pixel::Color,
+};
 
 #[pyclass(unsendable)]
 pub struct PyCatEngine {
@@ -120,6 +122,17 @@ impl PyCatEngine {
     }
 
     #[getter]
+    fn mouse_state(&self) -> PyResult<(bool, bool, bool, bool, bool)>{
+        let result = self.engine.input.mouse_buttons_down(&self.engine.event_pump);
+        Ok((result["left"], result["middle"], result["right"], result["x1"], result["x2"]))
+    }
+
+    #[getter]
+    fn mouse_pos(&self) -> (i32, i32) {
+        self.engine.input.get_mouse_pos(&self.engine.event_pump)
+    }
+
+    #[getter]
     fn is_running(&self) -> bool {
         self.engine.running
     }
@@ -136,8 +149,16 @@ impl PyCatEngine {
         self.engine.renderer.draw_sprite_list(&mut sprite_list.sprite_list, x_offset, y_offset);
     } 
 
-    fn blit_font(&mut self, font: &PyFont, text: &str, x: f32, y: f32, size: f32) {
-        self.engine.renderer.draw_font(&font.font, text, x, y, size);
+    fn blit_font(&mut self, font: &PyFont, text: &str, x: f32, y: f32, size: f32, spacement: u32) {
+        self.engine.renderer.draw_font(&font.font, text, x, y, size, spacement);
+    }
+
+    fn blit_line(&mut self, p1: PyCoordinate2D, p2: PyCoordinate2D, r: u8, g: u8, b: u8, width: f32) {
+        self.engine.renderer.draw_line(p1.into_coordinate_2d(), p2.into_coordinate_2d(), &Color{ r, g, b, a: 255}, width);
+    }
+
+    fn blit_rect(&mut self, rect: &PyRect, r: u8, g: u8, b: u8, width: f32) {
+        self.engine.renderer.draw_rect(&rect.into_rect(), &Color{ r, g, b, a: 255}, width);
     }
 }
 
@@ -172,7 +193,7 @@ impl PySurface {
         self.surface.borrow_mut().crop(x, y, width, height);
     }
 
-    fn stretch(&mut self, width: u32, height: u32) {
+    fn stretch(&mut self, width: i32, height: i32) {
         self.surface.borrow_mut().stretch(width, height);
     }
 
@@ -187,6 +208,10 @@ impl PySurface {
     fn bind(&self) {
         self.surface.borrow_mut().bind();
     }
+
+    fn get_rect(&self) -> PyRect {
+        PyRect{ x: self.surface.borrow().get_rect().x, y: self.surface.borrow().get_rect().y, width: self.surface.borrow().get_rect().width, height: self.surface.borrow().get_rect().height  }
+    }
 }
 
 impl PySurface {
@@ -198,6 +223,20 @@ impl PySurface {
 #[pyclass(unsendable)]
 #[derive(Debug)]
 pub struct PyCoordinate2D(pub f32, pub f32);
+
+#[pymethods]
+impl PyCoordinate2D {
+    #[new]
+    fn new(x: f32, y: f32) -> Self {
+        Self{ 0: x, 1: y }
+    }
+}
+
+impl PyCoordinate2D {
+    pub fn into_coordinate_2d(&self) -> Coordinate2D {
+        Coordinate2D{ 0: self.0, 1: self.1 }
+    }
+}
 
 impl Clone for PyCoordinate2D {
     fn clone(&self) -> Self {
@@ -289,8 +328,21 @@ impl PyTileSet {
         Ok(self.tile_set.borrow_mut().append_tile(tile.tile))
     } 
 
-    fn stretch_tile(&mut self, tile: u32, width: u32, height: u32) {
+    fn stretch_tile(&mut self, tile: u32, width: i32, height: i32) {
         self.tile_set.borrow_mut().stretch_tile(tile, width, height);
+    }
+
+    fn flipv_tile(&mut self, tile: u32) {
+        self.tile_set.borrow_mut().flipv_tile(tile);
+    }
+    
+    fn fliph_tile(&mut self, tile: u32) {
+        self.tile_set.borrow_mut().fliph_tile(tile);
+    }
+    
+    fn get_tile_rect(&self, tile: u32) -> PyRect {
+        let get_tile_rect = self.tile_set.borrow().get_tile_rect(tile);
+        PyRect{ x: get_tile_rect.x, y: get_tile_rect.y, width: get_tile_rect.width, height: get_tile_rect.height }
     }
 }
 
@@ -374,7 +426,7 @@ impl PyRect {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         Self{ x, y, width, height }
     }
-
+    
     pub fn colliderect(&self, rect: &Self) -> PyResult<bool> {
         if self.x + self.width > rect.x
         && self.x < rect.x + rect.width
@@ -385,7 +437,7 @@ impl PyRect {
             Ok(false)
         }
     }
-
+    
     pub fn collidepoint(&self, point: &PyCoordinate2D) -> PyResult<bool> {
         if self.x < point.0
         && self.y < point.1
@@ -395,5 +447,11 @@ impl PyRect {
         } else {
             Ok(false)
         }
+    }
+}
+
+impl PyRect {
+    pub fn into_rect(&self) -> Rect {
+        Rect::new(self.x, self.y, self.width, self.height)
     }
 }

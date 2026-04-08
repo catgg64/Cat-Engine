@@ -86,6 +86,10 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        Self { x, y, width, height }
+    }
+
     pub fn colliderect(&self, rect: &Self) -> bool {
         if self.x + self.width > rect.x
         && self.x < rect.x + rect.width
