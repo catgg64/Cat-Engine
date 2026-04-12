@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{math::Coordinate2D, video::surface::Surface};
 
 pub struct Character {
-    pub crt: String,
+    pub crt: char,
     pub x: u32,
     pub y: u32,
     pub width: u32,
@@ -18,7 +18,7 @@ impl Clone for Character {
 
 pub struct Font {
     pub character_list: Vec<Character>,
-    pub uvs: HashMap<String, [Coordinate2D; 4]>,
+    pub uvs: HashMap<char, [Coordinate2D; 4]>,
     pub surface: Surface,
 }
 
@@ -28,7 +28,7 @@ impl Font {
     //! CatEngine's implementation of a font. Should be feed characters individually, and there is no ttf support yet.
     pub fn new(path: &str, character_list: Vec<Character>) -> Self {
         let mut surface = Surface::from_texture(path);
-        let mut uvs: HashMap<String, [Coordinate2D; 4]> = HashMap::new();
+        let mut uvs: HashMap<char, [Coordinate2D; 4]> = HashMap::new();
         for character in &character_list {
             let w = surface.width as f32;
             let h = surface.height as f32;
@@ -43,12 +43,27 @@ impl Font {
         Self { character_list, uvs, surface }
     }
 
-    pub fn return_character_from_string(&self, crt: &str) -> Result<&Character, String> {
+    pub fn return_character_from_string(&self, crt: char) -> Result<&Character, String> {
         for character in &self.character_list {
-            if character.crt == crt {
+            if character.crt as char == crt {
                 return Ok(&character)
             }
         }
-        Err("no character with such letter".to_string())
+        Err(format!("no character with such letter: {}", crt))
+    }
+
+    pub fn size(&self, text: &str, font_size: f32, spacement: f32) -> (f32, f32) {
+        let mut width = 0.0;
+        let mut height = 0.0;
+        
+        for ch in text.chars() {
+            if self.return_character_from_string(ch).unwrap().height as f32 > height {
+                height = self.return_character_from_string(ch).unwrap().height as f32 * font_size
+            }
+
+            width += self.return_character_from_string(ch).unwrap().width as f32 * font_size + spacement
+        }
+
+        (width, height)
     }
 }

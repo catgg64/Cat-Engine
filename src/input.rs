@@ -13,6 +13,10 @@ pub struct Input {
     pressed_keycode: HashSet<Keycode>,
     mouse_util: MouseUtil,
     mouse_delta: (i32, i32),
+    input_enabled: bool,
+    input: String,
+    input_char: String,
+    is_backspace: bool
 }
 
 impl Input {
@@ -23,6 +27,10 @@ impl Input {
             pressed_keycode: HashSet::new(),
             mouse_util,
             mouse_delta: (0, 0),
+            input_enabled: false,
+            input: String::new(),
+            input_char: String::new(),
+            is_backspace: false,
         }
     }
 
@@ -86,6 +94,30 @@ impl Input {
         self.mouse_delta
     }
 
+    pub fn zero_input(&mut self) {
+        self.input = String::new();
+    }
+
+    pub fn enable_input(&mut self) {
+        self.input_enabled = true
+    }
+
+    pub fn disable_input(&mut self) {
+        self.input_enabled = false
+    }
+
+    pub fn get_input(&self) -> &String {
+        &self.input
+    }
+
+    pub fn get_char_input(&self) -> &String {
+        &self.input_char
+    }
+
+    pub fn get_backspace(&self) -> &bool {
+        &self.is_backspace
+    }
+
     /// Updates the Yaw and Pitch. Used in 3D games.
     pub fn update_yaw_and_pitch(
         &self,
@@ -102,23 +134,29 @@ impl Input {
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
+        self.input_char = String::new();
+        self.is_backspace = false;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => {
                     running = false
                 },
                 Event::KeyDown { scancode: Some(key), keycode: Some(key_keycode), .. } => {
+                    if key_keycode == Keycode::Backspace && self.input_enabled {
+                        self.input.pop();
+                        self.is_backspace = true
+                    }
                     self.press(key);
                     self.press_keycode(key_keycode);
                 },
                 Event::KeyUp { scancode: Some(key), keycode: Some(key_keycode), .. } => {
                     self.release(key);
-                    self.press_keycode(key_keycode);
+                    self.release_keycode(key_keycode);
                 },
                 Event::MouseMotion { xrel, yrel, .. } => {
                     self.mouse_delta = (xrel, yrel);
                 },
-                sdl2::event::Event::Window { win_event, .. } => {
+                Event::Window { win_event, .. } => {
                     match win_event {
                         sdl2::event::WindowEvent::Resized(w, h) |
                         sdl2::event::WindowEvent::SizeChanged(w, h) => {
@@ -131,6 +169,10 @@ impl Input {
                         _ => {}
 
                     }
+                }
+                Event::TextInput { timestamp, window_id, text } => {
+                    self.input.push_str(&text);
+                    self.input_char = text;
                 }
             _ => {},
             }

@@ -2,9 +2,6 @@
 #![allow(warnings)]
 
 use glam::Mat4;
-
-#[cfg(feature = "python")]
-use crate::{python::*};
 use crate::{video::Renderer};
 
 pub mod pixel;
@@ -193,6 +190,28 @@ impl CatEngine {
         self.screen_height = height;
         self.renderer.set_size(width, height);
     }
+
+    pub fn get_size(&self) -> (u32, u32) {
+        (self.screen_width, self.screen_height)
+    }
+
+    pub fn start_text_input(&mut self) {
+        self.video_subsystem.text_input().start();
+        self.input.enable_input();
+    }
+    
+    pub fn stop_text_input(&mut self) {
+        self.video_subsystem.text_input().stop();
+        self.input.disable_input();
+    }
+
+    pub fn get_text_input_enabled(&self) -> bool {
+        self.video_subsystem.text_input().is_active()
+    }
+
+    pub fn clear_text_input(&mut self) {
+        self.input.zero_input();
+    }
 }
 
 pub mod keyboard {
@@ -221,19 +240,18 @@ mod python;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 #[cfg(feature = "python")]
-use python::{ PyCatEngine, PySurface };
 
 #[cfg(feature = "python")]
 #[pymodule]
 fn catengine(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<PyCatEngine>()?;
-    m.add_class::<PySurface>()?;
-    m.add_class::<PyCoordinate2D>()?;
-    m.add_class::<PyTileSet>()?;
-    m.add_class::<PyTile>()?;
-    m.add_class::<PySpriteList>()?;
-    m.add_class::<PyCharacter>()?;
-    m.add_class::<PyFont>()?;
-    m.add_class::<PyRect>()?;
+    m.add_class::<crate::python::CatEngine>()?;
+    m.add_class::<crate::python::Surface>()?;
+    m.add_class::<crate::python::Coordinate2D>()?;
+    m.add_class::<crate::python::TileSet>()?;
+    m.add_class::<crate::python::Tile>()?;
+    m.add_class::<crate::python::SpriteList>()?;
+    m.add_class::<crate::python::Character>()?;
+    m.add_class::<crate::python::Font>()?;
+    m.add_class::<crate::python::Rect>()?;
     Ok(())
 }

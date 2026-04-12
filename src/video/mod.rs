@@ -992,9 +992,9 @@ impl Renderer {
 
         for character in text.chars() {
             let ch = character.to_string();
-            let glyph = font.return_character_from_string(&ch).unwrap();
+            let glyph = font.return_character_from_string(character).unwrap();
 
-            let uv = font.uvs.get(&ch).unwrap();
+            let uv = font.uvs.get(&character).unwrap();
 
             uvs.push(Coordinate2D(uv[0].0, uv[0].1));
             uvs.push(Coordinate2D(uv[1].0, uv[1].1));

@@ -363,7 +363,7 @@ impl TileSet {
 
     pub fn fliph_tile(&mut self, tile: u32) {
         for corner in self.tile_list[tile as usize].corners.iter_mut() {
-            corner.0 = 1.0 - corner.1;
+            corner.0 = 1.0 - corner.0;
         }
     }
     

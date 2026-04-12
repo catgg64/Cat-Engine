@@ -1,22 +1,18 @@
 use std::{rc::Rc, cell::{RefCell, Ref}, vec};
 
 use pyo3::prelude::*;
-use crate::{CatEngine, keyboard, 
-    math::{Coordinate2D, Coordinate3D, Rect}, 
-    sprite::{Sprite, SpriteList}, 
-    video::{Renderer, 
-        surface::{self, Surface, Tile, TileSet}},
-    font::{ Character, Font },
+use crate::{
     pixel::Color,
+    keyboard::{ Keycode, Scancode },
 };
 
 #[pyclass(unsendable)]
-pub struct PyCatEngine {
-    engine: CatEngine,
+pub struct CatEngine {
+    engine: crate::CatEngine,
 }
 
 #[pymethods]
-impl PyCatEngine {
+impl CatEngine {
     #[new]
     fn new(title: String, width: u32, height: u32, flags: Vec<String>) -> PyResult<Self> {
         let mut true_flags = Vec::new();
@@ -28,7 +24,7 @@ impl PyCatEngine {
                 _ => {},
             }
         }
-        let engine = CatEngine::new(&title, width, height, true_flags)
+        let engine = crate::CatEngine::new(&title, width, height, true_flags)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
         Ok(Self { engine })
     }
@@ -44,36 +40,38 @@ impl PyCatEngine {
     fn is_down_scancode(&self, key: String) -> PyResult<bool> {
         Ok(self.engine.input.is_down({
             match key.as_str() {
-                "A" => {keyboard::Scancode::A}
-                "B" => {keyboard::Scancode::B}
-                "C" => {keyboard::Scancode::C}
-                "D" => {keyboard::Scancode::D}
-                "E" => {keyboard::Scancode::E}
-                "F" => {keyboard::Scancode::F}
-                "G" => {keyboard::Scancode::G}
-                "H" => {keyboard::Scancode::H}
-                "I" => {keyboard::Scancode::I}
-                "J" => {keyboard::Scancode::J}
-                "K" => {keyboard::Scancode::K}
-                "L" => {keyboard::Scancode::L}
-                "M" => {keyboard::Scancode::M}
-                "N" => {keyboard::Scancode::N}
-                "O" => {keyboard::Scancode::O}
-                "P" => {keyboard::Scancode::P}
-                "Q" => {keyboard::Scancode::Q}
-                "R" => {keyboard::Scancode::R}
-                "S" => {keyboard::Scancode::S}
-                "T" => {keyboard::Scancode::T}
-                "U" => {keyboard::Scancode::U}
-                "V" => {keyboard::Scancode::V}
-                "W" => {keyboard::Scancode::W}
-                "X" => {keyboard::Scancode::X}
-                "Y" => {keyboard::Scancode::Y}
-                "Z" => {keyboard::Scancode::Z}
-                "up" => {keyboard::Scancode::Up}
-                "down" => {keyboard::Scancode::Down}
-                "left" => {keyboard::Scancode::Left}
-                "right" => {keyboard::Scancode::Right}
+                "A" => {Scancode::A}
+                "B" => {Scancode::B}
+                "C" => {Scancode::C}
+                "D" => {Scancode::D}
+                "E" => {Scancode::E}
+                "F" => {Scancode::F}
+                "G" => {Scancode::G}
+                "H" => {Scancode::H}
+                "I" => {Scancode::I}
+                "J" => {Scancode::J}
+                "K" => {Scancode::K}
+                "L" => {Scancode::L}
+                "M" => {Scancode::M}
+                "N" => {Scancode::N}
+                "O" => {Scancode::O}
+                "P" => {Scancode::P}
+                "Q" => {Scancode::Q}
+                "R" => {Scancode::R}
+                "S" => {Scancode::S}
+                "T" => {Scancode::T}
+                "U" => {Scancode::U}
+                "V" => {Scancode::V}
+                "W" => {Scancode::W}
+                "X" => {Scancode::X}
+                "Y" => {Scancode::Y}
+                "Z" => {Scancode::Z}
+                "up" => {Scancode::Up}
+                "down" => {Scancode::Down}
+                "left" => {Scancode::Left}
+                "right" => {Scancode::Right}
+                "backspace" => {Scancode::Backspace}
+                "escape" => {Scancode::Escape}
                 _ => {
                     panic!("no key named {}", key);
                 }
@@ -84,36 +82,38 @@ impl PyCatEngine {
     fn is_down_keycode(&self, key: String) -> PyResult<bool> {
         Ok(self.engine.input.is_down_keycode({
             match key.as_str() {
-                "A" => {keyboard::Keycode::A}
-                "B" => {keyboard::Keycode::B}
-                "C" => {keyboard::Keycode::C}
-                "D" => {keyboard::Keycode::D}
-                "E" => {keyboard::Keycode::E}
-                "F" => {keyboard::Keycode::F}
-                "G" => {keyboard::Keycode::G}
-                "H" => {keyboard::Keycode::H}
-                "I" => {keyboard::Keycode::I}
-                "J" => {keyboard::Keycode::J}
-                "K" => {keyboard::Keycode::K}
-                "L" => {keyboard::Keycode::L}
-                "M" => {keyboard::Keycode::M}
-                "N" => {keyboard::Keycode::N}
-                "O" => {keyboard::Keycode::O}
-                "P" => {keyboard::Keycode::P}
-                "Q" => {keyboard::Keycode::Q}
-                "R" => {keyboard::Keycode::R}
-                "S" => {keyboard::Keycode::S}
-                "T" => {keyboard::Keycode::T}
-                "U" => {keyboard::Keycode::U}
-                "V" => {keyboard::Keycode::V}
-                "W" => {keyboard::Keycode::W}
-                "X" => {keyboard::Keycode::X}
-                "Y" => {keyboard::Keycode::Y}
-                "Z" => {keyboard::Keycode::Z}
-                "up" => {keyboard::Keycode::Up}
-                "down" => {keyboard::Keycode::Down}
-                "left" => {keyboard::Keycode::Left}
-                "right" => {keyboard::Keycode::Right}
+                "A" => {Keycode::A}
+                "B" => {Keycode::B}
+                "C" => {Keycode::C}
+                "D" => {Keycode::D}
+                "E" => {Keycode::E}
+                "F" => {Keycode::F}
+                "G" => {Keycode::G}
+                "H" => {Keycode::H}
+                "I" => {Keycode::I}
+                "J" => {Keycode::J}
+                "K" => {Keycode::K}
+                "L" => {Keycode::L}
+                "M" => {Keycode::M}
+                "N" => {Keycode::N}
+                "O" => {Keycode::O}
+                "P" => {Keycode::P}
+                "Q" => {Keycode::Q}
+                "R" => {Keycode::R}
+                "S" => {Keycode::S}
+                "T" => {Keycode::T}
+                "U" => {Keycode::U}
+                "V" => {Keycode::V}
+                "W" => {Keycode::W}
+                "X" => {Keycode::X}
+                "Y" => {Keycode::Y}
+                "Z" => {Keycode::Z}
+                "up" => {Keycode::Up}
+                "down" => {Keycode::Down}
+                "left" => {Keycode::Left}
+                "right" => {Keycode::Right}
+                "backspace" => {Keycode::Backspace}
+                "escape" => {Keycode::Escape}
                 _ => {
                     panic!("no key named {}", key);
                 }
@@ -137,47 +137,86 @@ impl PyCatEngine {
         self.engine.running
     }
 
-    fn blit_surface(&mut self, surface: &PySurface, pos_x: f32, pos_y: f32) {
+    fn start_text_input(&mut self) {
+        self.engine.start_text_input();
+    }
+    
+    fn stop_text_input(&mut self) {
+        self.engine.stop_text_input();
+    }
+
+    #[getter]
+    fn text_input(&self) -> PyResult<&String> {
+        Ok(
+            self.engine.input.get_input()
+        )
+    }
+    
+    #[getter]
+    fn text_input_enabled(&self) -> PyResult<bool> {
+        Ok(self.engine.get_text_input_enabled())
+    }
+
+    #[getter]
+    fn text_input_char(&self) -> PyResult<&String> {
+        Ok(self.engine.input.get_char_input())
+    }
+
+    #[getter]
+    fn text_input_backspace(&self) -> PyResult<bool> {
+        Ok(self.engine.input.get_backspace().clone())
+    }
+
+    #[getter]
+    fn size(&self) -> PyResult<(u32, u32)> {
+        Ok(self.engine.get_size())
+    }
+
+    fn clear_text_input(&mut self) {
+        self.engine.input.zero_input();
+    }
+
+    fn blit_surface(&mut self, surface: &Surface, pos_x: f32, pos_y: f32) {
         self.engine.renderer.blit(&surface.surface.borrow(), pos_x, pos_y);
     }
     
-    fn blit_tileset(&mut self, tile: u32, tile_set: &mut PyTileSet, pos_x: f32, pos_y: f32) {
+    fn blit_tileset(&mut self, tile: u32, tile_set: &mut TileSet, pos_x: f32, pos_y: f32) {
         self.engine.renderer.draw_tileset(tile, &mut tile_set.tile_set.borrow_mut(), pos_x, pos_y);
     }
 
-    fn blit_sprite_list(&mut self, sprite_list: &mut PySpriteList, x_offset: f32, y_offset: f32) {
+    fn blit_sprite_list(&mut self, sprite_list: &mut SpriteList, x_offset: f32, y_offset: f32) {
         self.engine.renderer.draw_sprite_list(&mut sprite_list.sprite_list, x_offset, y_offset);
     } 
 
-    fn blit_font(&mut self, font: &PyFont, text: &str, x: f32, y: f32, size: f32, spacement: u32) {
+    fn blit_font(&mut self, font: &Font, text: &str, x: f32, y: f32, size: f32, spacement: u32) {
         self.engine.renderer.draw_font(&font.font, text, x, y, size, spacement);
     }
 
-    fn blit_line(&mut self, p1: PyCoordinate2D, p2: PyCoordinate2D, r: u8, g: u8, b: u8, width: f32) {
+    fn blit_line(&mut self, p1: Coordinate2D, p2: Coordinate2D, r: u8, g: u8, b: u8, width: f32) {
         self.engine.renderer.draw_line(p1.into_coordinate_2d(), p2.into_coordinate_2d(), &Color{ r, g, b, a: 255}, width);
     }
 
-    fn blit_rect(&mut self, rect: &PyRect, r: u8, g: u8, b: u8, width: f32) {
+    fn blit_rect(&mut self, rect: &Rect, r: u8, g: u8, b: u8, width: f32) {
         self.engine.renderer.draw_rect(&rect.into_rect(), &Color{ r, g, b, a: 255}, width);
     }
 }
 
 #[pyclass(unsendable)]
-pub struct PySurface {
-    surface: Rc<RefCell<Surface>>,
+pub struct Surface {
+    surface: Rc<RefCell<crate::video::surface::Surface>>,
 }
 
 #[pymethods]
-impl PySurface {
+impl Surface {
     #[new]
     fn new(width: usize, height: usize) -> PyResult<Self> {
-        Ok(Self{ surface: Rc::new(RefCell::new(surface::Surface::new(width, height))) })
+        Ok(Self{ surface: Rc::new(RefCell::new(crate::video::surface::Surface::new(width, height))) })
     }
 
     #[staticmethod]
     fn from_texture(path: String) -> PyResult<Self> {
         Ok(Self {
-            surface: Rc::new(RefCell::new(surface::Surface::from_texture(&path)))
+            surface: Rc::new(RefCell::new(crate::video::surface::Surface::from_texture(&path)))
         })
     }
 
@@ -185,7 +224,7 @@ impl PySurface {
         self.surface.borrow_mut().upload();
     }
 
-    fn blit(&mut self, surface: &PySurface, offset_x: u32, offset_y: u32) {
+    fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
         self.surface.borrow_mut().blit(&surface.surface.borrow(), offset_x, offset_y);
     }
 
@@ -209,36 +248,36 @@ impl PySurface {
         self.surface.borrow_mut().bind();
     }
 
-    fn get_rect(&self) -> PyRect {
-        PyRect{ x: self.surface.borrow().get_rect().x, y: self.surface.borrow().get_rect().y, width: self.surface.borrow().get_rect().width, height: self.surface.borrow().get_rect().height  }
+    fn get_rect(&self) -> Rect {
+        Rect{ x: self.surface.borrow().get_rect().x, y: self.surface.borrow().get_rect().y, width: self.surface.borrow().get_rect().width, height: self.surface.borrow().get_rect().height  }
     }
 }
 
-impl PySurface {
-    pub fn get_surface(&self) -> Ref<Surface> {
+impl Surface {
+    pub fn get_surface(&self) -> Ref<crate::video::surface::Surface> {
         self.surface.borrow()
     }
 }
 
 #[pyclass(unsendable)]
 #[derive(Debug)]
-pub struct PyCoordinate2D(pub f32, pub f32);
+pub struct Coordinate2D(pub f32, pub f32);
 
 #[pymethods]
-impl PyCoordinate2D {
+impl Coordinate2D {
     #[new]
     fn new(x: f32, y: f32) -> Self {
         Self{ 0: x, 1: y }
     }
 }
 
-impl PyCoordinate2D {
-    pub fn into_coordinate_2d(&self) -> Coordinate2D {
-        Coordinate2D{ 0: self.0, 1: self.1 }
+impl Coordinate2D {
+    pub fn into_coordinate_2d(&self) -> crate::math::Coordinate2D {
+        crate::math::Coordinate2D{ 0: self.0, 1: self.1 }
     }
 }
 
-impl Clone for PyCoordinate2D {
+impl Clone for Coordinate2D {
     fn clone(&self) -> Self {
         Self(self.0, self.1)
     }
@@ -246,9 +285,9 @@ impl Clone for PyCoordinate2D {
 
 #[pyclass(unsendable)]
 #[derive(Debug)]
-pub struct PyCoordinate3D(pub f32, pub f32, pub f32);
+pub struct Coordinate3D(pub f32, pub f32, pub f32);
 
-impl Clone for PyCoordinate3D {
+impl Clone for Coordinate3D {
     fn clone(&self) -> Self {
         Self(self.0, self.1, self.2)
     }
@@ -256,28 +295,28 @@ impl Clone for PyCoordinate3D {
 
 
 #[pyclass(unsendable)]
-pub struct PyTile {
-    tile: Tile,
+pub struct Tile {
+    tile: crate::video::surface::Tile,
 }
 
-impl Clone for PyTile {
+impl Clone for Tile {
     fn clone(&self) -> Self {
         Self { tile: self.tile.clone() }
     }
 }
 
 #[pymethods]
-impl PyTile {
+impl Tile {
     #[new]
-    fn new(py: Python, corners: Vec<(f32, f32)>, vertices: Vec<(f32, f32)>, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<PyTile> {
-        let corners: Vec<PyCoordinate2D> = corners
+    fn new(py: Python, corners: Vec<(f32, f32)>, vertices: Vec<(f32, f32)>, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<Tile> {
+        let corners: Vec<Coordinate2D> = corners
             .into_iter()
-            .map(|(x, y)| PyCoordinate2D { 0: x, 1: y })
+            .map(|(x, y)| Coordinate2D { 0: x, 1: y })
             .collect();
 
-        let vertices: Vec<PyCoordinate3D> = vertices
+        let vertices: Vec<Coordinate3D> = vertices
             .into_iter()
-            .map(|(x, y)| PyCoordinate3D { 0: x, 1: y, 2: z })
+            .map(|(x, y)| Coordinate3D { 0: x, 1: y, 2: z })
             .collect();
         
         if corners.len() != 4 || vertices.len() != 4 {
@@ -286,33 +325,33 @@ impl PyTile {
             ));
         }
 
-        let corners: [PyCoordinate2D; 4] = corners.try_into().unwrap();
-        let vertices: [PyCoordinate3D; 4] = vertices.try_into().unwrap();
+        let corners: [Coordinate2D; 4] = corners.try_into().unwrap();
+        let vertices: [Coordinate3D; 4] = vertices.try_into().unwrap();
 
 
         Ok(Self {
-            tile: Tile::new(corners.map(|x| Coordinate2D{ 0: x.0, 1: x.1}), vertices.map(|x| Coordinate3D{ 0: x.0, 1: x.1, 2: x.2}), x, y, width, height)
+            tile: crate::video::surface::Tile::new(corners.map(|x| crate::math::Coordinate2D{ 0: x.0, 1: x.1}), vertices.map(|x| crate::math::Coordinate3D{ 0: x.0, 1: x.1, 2: x.2}), x, y, width, height)
             }
         )
     }
 }
 
 #[pyclass(unsendable)]
-pub struct PyTileSet {
-    tile_set: Rc<RefCell<TileSet>>,
+pub struct TileSet {
+    tile_set: Rc<RefCell<crate::video::surface::TileSet>>,
 }
 
 #[pymethods]
-impl PyTileSet {
+impl TileSet {
     #[new]
     fn new(width: usize, height: usize) -> PyResult<Self> {
-        Ok(Self{ tile_set: Rc::new(RefCell::new(surface::TileSet::new(width, height))) })
+        Ok(Self{ tile_set: Rc::new(RefCell::new(crate::video::surface::TileSet::new(width, height))) })
     }
 
     #[staticmethod]
     fn from_texture(path: String) -> PyResult<Self> {
         Ok(Self {
-            tile_set: Rc::new(RefCell::new(surface::TileSet::from_texture(&path)))
+            tile_set: Rc::new(RefCell::new(crate::video::surface::TileSet::from_texture(&path)))
         })
     }
 
@@ -320,11 +359,11 @@ impl PyTileSet {
         Ok(self.tile_set.borrow_mut().simple_append_tile(x, y, z, width, height))
     }
 
-    fn blit(&mut self, surface: &PySurface, offset_x: u32, offset_y: u32) {
+    fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
         self.tile_set.borrow_mut().blit(&surface.surface.borrow(), offset_x, offset_y);
     }
 
-    fn append_tile(&mut self, tile: PyTile) -> PyResult<u32>{
+    fn append_tile(&mut self, tile: Tile) -> PyResult<u32>{
         Ok(self.tile_set.borrow_mut().append_tile(tile.tile))
     } 
 
@@ -340,30 +379,30 @@ impl PyTileSet {
         self.tile_set.borrow_mut().fliph_tile(tile);
     }
     
-    fn get_tile_rect(&self, tile: u32) -> PyRect {
+    fn get_tile_rect(&self, tile: u32) -> Rect {
         let get_tile_rect = self.tile_set.borrow().get_tile_rect(tile);
-        PyRect{ x: get_tile_rect.x, y: get_tile_rect.y, width: get_tile_rect.width, height: get_tile_rect.height }
+        Rect{ x: get_tile_rect.x, y: get_tile_rect.y, width: get_tile_rect.width, height: get_tile_rect.height }
     }
 }
 
 #[pyclass(unsendable)]
-pub struct PySpriteList {
-    sprite_list: SpriteList,
-    true_sprite_list: Vec<Sprite>
+pub struct SpriteList {
+    sprite_list: crate::sprite::SpriteList,
+    true_sprite_list: Vec<crate::sprite::Sprite>
 }
 
 #[pymethods]
-impl PySpriteList {
+impl SpriteList {
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(Self { sprite_list: SpriteList { sprite_list: vec![] }, true_sprite_list: vec![] })
+        Ok(Self { sprite_list: crate::sprite::SpriteList { sprite_list: vec![] }, true_sprite_list: vec![] })
     }
 
-    fn append_surface(&mut self, x: f32, y: f32, z: f32, surface: &PySurface, ysort: bool) {
+    fn append_surface(&mut self, x: f32, y: f32, z: f32, surface: &Surface, ysort: bool) {
         self.true_sprite_list.push(crate::sprite::Sprite::Surface(x, y, z, Rc::clone(&surface.surface), crate::video::CatEngineShader::TestShader, ysort));
     }
 
-    fn append_tile(&mut self, x: f32, y: f32, z: f32, tile: u32, tile_set: &PyTileSet, ysort: bool) {
+    fn append_tile(&mut self, x: f32, y: f32, z: f32, tile: u32, tile_set: &TileSet, ysort: bool) {
         self.true_sprite_list.push(crate::sprite::Sprite::Tile(x, y, z, Rc::clone(&tile_set.tile_set), tile, crate::video::CatEngineShader::TextureShader, ysort));
     }
 
@@ -374,27 +413,27 @@ impl PySpriteList {
 }
 
 #[pyclass(unsendable)]
-pub struct PyCharacter {
-    character: Character,
+pub struct Character {
+    character: crate::font::Character,
 }
 
 #[pymethods]
-impl PyCharacter {
+impl Character {
     #[new]
-    fn new(chr: String, x: u32, y: u32, width: u32, height: u32) -> Self {
-        PyCharacter{ character: Character{ crt: chr, x, y, width, height } }
+    fn new(chr: char, x: u32, y: u32, width: u32, height: u32) -> Self {
+        Character{ character: crate::font::Character{ crt: chr, x, y, width, height } }
     }
 }
 
 #[pyclass(unsendable)]
-pub struct PyFont {
-    font: Font,
+pub struct Font {
+    font: crate::font::Font,
 }
 
 #[pymethods]
-impl PyFont {
+impl Font {
     #[new]
-    fn new(py: Python, path: &str, character_list: Vec<Py<PyCharacter>>) -> Self {
+    fn new(py: Python, path: &str, character_list: Vec<Py<Character>>) -> PyResult<Self> {
         let mut chars = vec![];
 
         for ch in character_list {
@@ -402,14 +441,29 @@ impl PyFont {
             chars.push(borrowed.character.clone());
         }
 
-        Self {
-            font: Font::new(path, chars)
+        Ok(Self {
+            font: crate::font::Font::new(path, chars)
+        })
+    }
+
+    fn size(&self, text: &str, font_size: f32, spacement: f32) -> PyResult<(f32, f32)> {
+        let mut width = 0.0;
+        let mut height = 0.0;
+        
+        for ch in text.chars() {
+            if self.font.return_character_from_string(ch).unwrap().height as f32 > height {
+                height = self.font.return_character_from_string(ch).unwrap().height as f32 * font_size
+            }
+
+            width += self.font.return_character_from_string(ch).unwrap().width as f32 * font_size + spacement
         }
+
+        Ok((width, height))
     }
 }
 
 #[pyclass(unsendable)]
-pub struct PyRect {
+pub struct Rect {
     #[pyo3(get, set)]
     pub x: f32,
     #[pyo3(get, set)]
@@ -421,7 +475,7 @@ pub struct PyRect {
 }
 
 #[pymethods]
-impl PyRect {
+impl Rect {
     #[new]
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         Self{ x, y, width, height }
@@ -438,7 +492,7 @@ impl PyRect {
         }
     }
     
-    pub fn collidepoint(&self, point: &PyCoordinate2D) -> PyResult<bool> {
+    pub fn collidepoint(&self, point: &Coordinate2D) -> PyResult<bool> {
         if self.x < point.0
         && self.y < point.1
         && self.width + self.x > point.0
@@ -450,8 +504,8 @@ impl PyRect {
     }
 }
 
-impl PyRect {
-    pub fn into_rect(&self) -> Rect {
-        Rect::new(self.x, self.y, self.width, self.height)
+impl Rect {
+    pub fn into_rect(&self) -> crate::math::Rect {
+        crate::math::Rect::new(self.x, self.y, self.width, self.height)
     }
 }
