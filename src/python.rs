@@ -33,6 +33,18 @@ impl CatEngine {
         self.engine.update();
     }
 
+    fn enable_fullscreen(&mut self) {
+        self.engine.enable_fullscreen();
+    }
+    
+    fn disable_fullscreen(&mut self) {
+        self.engine.disable_fullscreen();
+    }
+    
+    fn enable_true_fullscreen(&mut self) {
+        self.engine.enable_true_fullscreen();
+    }
+    
     fn clear_screen(&self, r: u8, g: u8, b: u8, a: u8) {
         self.engine.clear_screen(crate::pixel::Color { r, g, b, a });
     }
@@ -170,6 +182,11 @@ impl CatEngine {
     #[getter]
     fn size(&self) -> PyResult<(u32, u32)> {
         Ok(self.engine.get_size())
+    }
+
+    #[getter]
+    fn mouse_wheel_direction(&self) -> PyResult<(i32, i32)> {
+        Ok(self.engine.input.get_mouse_wheel_direction().clone())
     }
 
     fn clear_text_input(&mut self) {

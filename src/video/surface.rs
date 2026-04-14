@@ -356,14 +356,24 @@ impl TileSet {
     }
 
     pub fn flipv_tile(&mut self, tile: u32) {
-        for corner in self.tile_list[tile as usize].corners.iter_mut() {
-            corner.1 = 1.0 - corner.1;
+        let corners = &mut self.tile_list[tile as usize].corners;
+
+        let min_y = corners.iter().map(|c| c.1).fold(f32::INFINITY, f32::min);
+        let max_y = corners.iter().map(|c| c.1).fold(f32::NEG_INFINITY, f32::max);
+
+        for corner in corners.iter_mut() {
+            corner.1 = min_y + max_y - corner.1;
         }
     }
 
     pub fn fliph_tile(&mut self, tile: u32) {
-        for corner in self.tile_list[tile as usize].corners.iter_mut() {
-            corner.0 = 1.0 - corner.0;
+        let corners = &mut self.tile_list[tile as usize].corners;
+
+        let min_x = corners.iter().map(|c| c.0).fold(f32::INFINITY, f32::min);
+        let max_x = corners.iter().map(|c| c.0).fold(f32::NEG_INFINITY, f32::max);
+
+        for corner in corners.iter_mut() {
+            corner.0 = min_x + max_x - corner.0;
         }
     }
     

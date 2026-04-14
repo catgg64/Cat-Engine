@@ -5,7 +5,7 @@ use std::ops::Index;
 use sdl2::mouse::MouseUtil;
 use sdl2::video::Window;
 
-use crate::math;
+use crate::{CatEngine, math};
 use crate::video::Renderer;
 
 pub struct Input {
@@ -16,11 +16,14 @@ pub struct Input {
     input_enabled: bool,
     input: String,
     input_char: String,
-    is_backspace: bool
+    is_backspace: bool,
+    mouse_wheel_direction: (i32, i32),
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Input {
-    pub fn new(sdl_context: &Sdl) -> Self {
+    pub fn new(sdl_context: &Sdl, width: u32, height: u32) -> Self {
         let mouse_util = sdl_context.mouse();
         Self {
             pressed: HashSet::new(),
@@ -31,6 +34,9 @@ impl Input {
             input: String::new(),
             input_char: String::new(),
             is_backspace: false,
+            mouse_wheel_direction: (0, 0),
+            width,
+            height,
         }
     }
 
@@ -118,6 +124,10 @@ impl Input {
         &self.is_backspace
     }
 
+    pub fn get_mouse_wheel_direction(&self) -> &(i32, i32) {
+        &self.mouse_wheel_direction
+    }
+
     /// Updates the Yaw and Pitch. Used in 3D games.
     pub fn update_yaw_and_pitch(
         &self,
@@ -131,11 +141,12 @@ impl Input {
         *pitch = pitch.clamp(-1.570, 1.570); // ±89 degrees in radians
     }
     
-    pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer) -> bool {
+    pub fn update(&mut self, event_pump: &mut sdl2::EventPump, renderer: &mut Renderer, stretch_mode: &String) -> bool {
         self.mouse_delta = (0, 0);
         let mut running: bool = true;
         self.input_char = String::new();
         self.is_backspace = false;
+        self.mouse_wheel_direction = (0, 0);
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => {
@@ -165,6 +176,9 @@ impl Input {
                             }
                             let projection = glam::Mat4::perspective_rh_gl(renderer.fov.to_radians(), w as f32 / h as f32, renderer.near_plane, renderer.far_plane);
                             renderer.true_set_projection(projection);
+                            renderer.set_size(w as u32, h as u32, stretch_mode);
+                            self.width = w as u32;
+                            self.height = h as u32;
                         }
                         _ => {}
 
@@ -173,6 +187,10 @@ impl Input {
                 Event::TextInput { timestamp, window_id, text } => {
                     self.input.push_str(&text);
                     self.input_char = text;
+                }
+                Event::MouseWheel { timestamp, window_id, which, x, y, direction, precise_x, precise_y } => {
+                    self.mouse_wheel_direction.0 = x;
+                    self.mouse_wheel_direction.1 = y;
                 }
             _ => {},
             }

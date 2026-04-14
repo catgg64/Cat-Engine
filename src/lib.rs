@@ -21,6 +21,8 @@ pub enum CatEngineFlag {
     Vsync,
     /// Enables DynamicVsync.
     DynamicVsync,
+    /// The window stretches when in 2D.
+    Stretch,
 }
 
 pub struct CatEngine {
@@ -34,6 +36,7 @@ pub struct CatEngine {
     pub running: bool,
     pub screen_width: u32,
     pub screen_height: u32,
+    pub stretch_mode: String,
 }
 
 impl CatEngine {
@@ -90,8 +93,12 @@ impl CatEngine {
         }
 
         let mut renderer = Renderer::new(width, height, 67.0, 0.1, 1000.0);
-        let mut input = input::Input::new(&sdl_context);
+        let mut input = input::Input::new(&sdl_context, width, height);
         let mut running: bool = true;
+        let mut stretch_mode = "normal";
+        if flags.contains(&CatEngineFlag::Stretch) {
+            stretch_mode = "stretch";
+        }
 
         Ok(CatEngine { 
             sdl_context,
@@ -104,13 +111,16 @@ impl CatEngine {
             running,
             screen_width: width,
             screen_height: height,
+            stretch_mode: stretch_mode.to_string(),
         })
     }
 
     /// Updates the screen. Should be ran every frame after rendering.
     pub fn update(&mut self) {
         self.window.gl_swap_window();
-        self.running = self.input.update(&mut self.event_pump, &mut self.renderer);
+        self.running = self.input.update(&mut self.event_pump, &mut self.renderer, &self.stretch_mode);
+        self.screen_width = self.input.width;
+        self.screen_height = self.input.height;
     }
 
     /// Clears the whole screen. Should be done every frame before rendering is done.
@@ -188,7 +198,7 @@ impl CatEngine {
         }
         self.screen_width = width;
         self.screen_height = height;
-        self.renderer.set_size(width, height);
+        self.renderer.set_size(width, height, &self.stretch_mode);
     }
 
     pub fn get_size(&self) -> (u32, u32) {

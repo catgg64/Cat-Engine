@@ -608,9 +608,13 @@ impl Renderer {
     }
 
     /// Sets up size independentally. You should always use CatEngine's implementation for that.
-    pub fn set_size(&mut self, width: u32, height: u32) {
+    pub fn set_size(&mut self, width: u32, height: u32, stretch_mode: &String) {
         self.screen_width = width;
         self.screen_height = height;
+
+        if stretch_mode == "normal" {
+            self.orthographic_projection = glam::Mat4::orthographic_rh_gl(0.0, width as f32, height as f32, 0.0, -10000.0, 10000.0);
+        }
     }
 
     /// Blits a surface onto the screen. For proper Z control, use sprites.
@@ -1044,8 +1048,8 @@ impl Renderer {
 
         let data: Vec<f32> = vec![
             // position      // color
-            p1.0, p1.1,     color.r as f32, color.g as f32, color.b as f32,
-            p2.0, p2.1,     color.r as f32, color.g as f32, color.b as f32,
+            p1.0, p1.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0,
+            p2.0, p2.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0,
         ];
 
         unsafe {
