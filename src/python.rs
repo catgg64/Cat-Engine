@@ -193,12 +193,20 @@ impl CatEngine {
         self.engine.input.zero_input();
     }
 
+    fn enable_depth_test(&self) {
+        self.engine.enable_depth_test();
+    }
+    
+    fn disable_depth_test(&self) {
+        self.engine.disable_depth_test();
+    }
+
     fn blit_surface(&mut self, surface: &Surface, pos_x: f32, pos_y: f32) {
         self.engine.renderer.blit(&surface.surface.borrow(), pos_x, pos_y);
     }
     
-    fn blit_tileset(&mut self, tile: u32, tile_set: &mut TileSet, pos_x: f32, pos_y: f32) {
-        self.engine.renderer.draw_tileset(tile, &mut tile_set.tile_set.borrow_mut(), pos_x, pos_y);
+    fn blit_tileset(&mut self, tile: Tile, tile_set: &mut TileSet, pos_x: f32, pos_y: f32) {
+        self.engine.renderer.draw_tileset(tile.tile, &mut tile_set.tile_set.borrow_mut(), pos_x, pos_y);
     }
 
     fn blit_sprite_list(&mut self, sprite_list: &mut SpriteList, x_offset: f32, y_offset: f32) {
@@ -213,8 +221,8 @@ impl CatEngine {
         self.engine.renderer.draw_line(p1.into_coordinate_2d(), p2.into_coordinate_2d(), &Color{ r, g, b, a: 255}, width);
     }
 
-    fn blit_rect(&mut self, rect: &Rect, r: u8, g: u8, b: u8, width: f32) {
-        self.engine.renderer.draw_rect(&rect.into_rect(), &Color{ r, g, b, a: 255}, width);
+    fn blit_rect(&mut self, rect: &Rect, r: u8, g: u8, b: u8, a: u8, width: f32) {
+        self.engine.renderer.draw_rect(&rect.into_rect(), &Color{ r, g, b, a }, width);
     }
 }
 
@@ -267,6 +275,16 @@ impl Surface {
 
     fn get_rect(&self) -> Rect {
         Rect{ x: self.surface.borrow().get_rect().x, y: self.surface.borrow().get_rect().y, width: self.surface.borrow().get_rect().width, height: self.surface.borrow().get_rect().height  }
+    }
+
+    #[getter]
+    fn flipped_x(&self) -> PyResult<bool> {
+        Ok(self.surface.borrow().flipped_x)
+    }
+    
+    #[getter]
+    fn flipped_y(&self) -> PyResult<bool> {
+        Ok(self.surface.borrow().flipped_y)
     }
 }
 
@@ -324,7 +342,7 @@ impl Clone for Tile {
 
 #[pymethods]
 impl Tile {
-    #[new]
+    #[staticmethod]
     fn new(py: Python, corners: Vec<(f32, f32)>, vertices: Vec<(f32, f32)>, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<Tile> {
         let corners: Vec<Coordinate2D> = corners
             .into_iter()
@@ -351,6 +369,28 @@ impl Tile {
             }
         )
     }
+
+    #[new]
+    fn simple_new(x: u32, y: u32, z: f32, width: u32, height: u32, tile_set: &TileSet) -> PyResult<Self> {
+        Ok(Self{ tile: crate::video::surface::Tile::simple_new(x, y, z, width, height, &tile_set.tile_set.borrow()) })
+    }
+
+    fn stretch(&mut self, width: f32, height: f32) {
+        self.tile.stretch(width, height);
+    }
+
+    fn fliph(&mut self) {
+        self.tile.fliph();
+    }
+
+    fn flipv(&mut self) {
+        self.tile.flipv();
+    }
+
+    fn get_rect(&self) -> PyResult<Rect> {
+        let tile_rect = self.tile.get_rect();
+        Ok(Rect{ x: tile_rect.x, y: tile_rect.y, width: tile_rect.width, height: tile_rect.height })
+    }
 }
 
 #[pyclass(unsendable)]
@@ -372,33 +412,8 @@ impl TileSet {
         })
     }
 
-    fn simple_append_tile(&mut self, x: u32, y: u32, z: f32, width: u32, height: u32) -> PyResult<u32> {
-        Ok(self.tile_set.borrow_mut().simple_append_tile(x, y, z, width, height))
-    }
-
     fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
         self.tile_set.borrow_mut().blit(&surface.surface.borrow(), offset_x, offset_y);
-    }
-
-    fn append_tile(&mut self, tile: Tile) -> PyResult<u32>{
-        Ok(self.tile_set.borrow_mut().append_tile(tile.tile))
-    } 
-
-    fn stretch_tile(&mut self, tile: u32, width: i32, height: i32) {
-        self.tile_set.borrow_mut().stretch_tile(tile, width, height);
-    }
-
-    fn flipv_tile(&mut self, tile: u32) {
-        self.tile_set.borrow_mut().flipv_tile(tile);
-    }
-    
-    fn fliph_tile(&mut self, tile: u32) {
-        self.tile_set.borrow_mut().fliph_tile(tile);
-    }
-    
-    fn get_tile_rect(&self, tile: u32) -> Rect {
-        let get_tile_rect = self.tile_set.borrow().get_tile_rect(tile);
-        Rect{ x: get_tile_rect.x, y: get_tile_rect.y, width: get_tile_rect.width, height: get_tile_rect.height }
     }
 }
 
@@ -415,17 +430,35 @@ impl SpriteList {
         Ok(Self { sprite_list: crate::sprite::SpriteList { sprite_list: vec![] }, true_sprite_list: vec![] })
     }
 
-    fn append_surface(&mut self, x: f32, y: f32, z: f32, surface: &Surface, ysort: bool) {
-        self.true_sprite_list.push(crate::sprite::Sprite::Surface(x, y, z, Rc::clone(&surface.surface), crate::video::CatEngineShader::TestShader, ysort));
+    fn append_surface(&mut self, x: f32, y: f32, z: f32, surface: &Surface, ysort: bool, ysort_origin: f32) {
+        self.true_sprite_list.push(crate::sprite::Sprite::Surface(x, y, z, Rc::clone(&surface.surface), crate::video::CatEngineShader::TestShader, ysort, ysort_origin));
     }
 
-    fn append_tile(&mut self, x: f32, y: f32, z: f32, tile: u32, tile_set: &TileSet, ysort: bool) {
-        self.true_sprite_list.push(crate::sprite::Sprite::Tile(x, y, z, Rc::clone(&tile_set.tile_set), tile, crate::video::CatEngineShader::TextureShader, ysort));
+    fn append_tile(&mut self, x: f32, y: f32, z: f32, tile: Tile, tile_set: &TileSet, ysort: bool, ysort_origin: f32) {
+        self.true_sprite_list.push(crate::sprite::Sprite::Tile(x, y, z, Rc::clone(&tile_set.tile_set), tile.tile, crate::video::CatEngineShader::TextureShader, ysort, ysort_origin));
     }
 
     fn update(&mut self) {
         self.sprite_list.update(std::mem::take(&mut self.true_sprite_list));
         self.true_sprite_list = vec![];
+    }
+
+    fn clone_update(&mut self) {
+        self.sprite_list.clone_update(self.true_sprite_list.clone());
+    }
+
+
+    fn no_reset_update(&mut self) {
+        self.sprite_list.update(std::mem::take(&mut self.true_sprite_list));
+    }
+
+    fn reset_sprite_list(&mut self) {
+        self.true_sprite_list = vec![];
+        self.sprite_list.update(std::mem::take(&mut self.true_sprite_list));
+    }
+
+    fn print_sprite_list_width(&self) {
+        println!("{}", self.true_sprite_list.len());
     }
 }
 

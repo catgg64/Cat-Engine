@@ -31,6 +31,10 @@ impl Coordinate2D {
             1: coord.1,
         }
     }
+
+    pub fn to_tuple(&self) -> (f32, f32) {
+        (self.0, self.1)
+    }
 }
 
 impl Clone for Coordinate2D {
@@ -47,8 +51,22 @@ impl Add for Coordinate2D {
     }
 }
 
+impl Copy for Coordinate2D {
+    
+}
+
 #[repr(C)]
 pub struct Coordinate3D(pub f32, pub f32, pub f32);
+
+impl Coordinate3D {
+    pub fn to_tuple(&self) -> (f32, f32, f32) {
+        (self.0, self.1, self.2)
+    }
+}
+
+impl Copy for Coordinate3D {
+    
+}
 
 pub fn pixels_to_gl_coordinates(pos_x: f32, pos_y: f32, screen_width: u32, screen_height: u32) -> (f32, f32) {
     let sw = screen_width as f32;

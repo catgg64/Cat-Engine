@@ -1,12 +1,13 @@
 use std::ffi::CString;
 use glam::Mat4;
 
-use crate::font::Font;
+use crate::font::{Character, Font};
 use crate::pixel::Color;
-use crate::sprite::{self, ComplexSpriteList, SpriteList, Sprite};
 use crate::video::surface::Surface;
 use crate::math::{ Coordinate2D, Coordinate3D, Rect };
 use crate::mesh::{ Mesh };
+use crate::sprite::{ Sprite, SpriteList };
+use surface::{ TileSet, Tile };
 
 pub mod surface;
 
@@ -24,7 +25,7 @@ pub fn start_uv_elemnt_array() -> (u32, u32, u32, u32) {
         
         gl::BindVertexArray(vao);
         
-        let max_quads = 1000;
+        let max_quads = 10000;
 
         let vertex_size = max_quads * 6 * std::mem::size_of::<Coordinate3D>();
         let uv_size     = max_quads * 4 * std::mem::size_of::<Coordinate2D>();
@@ -512,6 +513,14 @@ impl Shader {
             Ok(gl::GetAttribLocation(self.program_id, attrib.as_ptr()) as i32)
         }
     }
+ 
+    pub fn set_vec4(&self, name: &str, x: f32, y: f32, z: f32, w: f32) {
+        let cname = CString::new(name).unwrap();
+        unsafe {
+            let location = gl::GetUniformLocation(self.program_id, cname.as_ptr());
+            gl::Uniform4f(location, x, y, z, w);
+        }
+}
 
 }
 
@@ -559,6 +568,12 @@ pub struct Renderer {
     test_vbo: u32,
     test_ebo: u32,
     test_color_vbo: u32,
+    line_shader: Shader,
+    rect_shader: Shader,
+    rect_vao: u32,
+    rect_vbo: u32,
+    rect_ebo: u32,
+    rect_color_vbo: u32,
     triangle3d_shader: Shader,
     triangle3d_vao: u32,
     triangle3d_vbo: u32,
@@ -581,10 +596,13 @@ impl Renderer {
         let triangle_shader = Shader::new(format!("{}/triangle.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/triangle.frag", env!("CARGO_MANIFEST_DIR")).as_str());
         let triangle3d_shader = Shader::new(format!("{}/triangle3d.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/triangle3d.frag", env!("CARGO_MANIFEST_DIR")).as_str());
         let test_shader = Shader::new(format!("{}/opengltest.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/opengltest.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let line_shader = Shader::new(format!("{}/line.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/line.frag", env!("CARGO_MANIFEST_DIR")).as_str());
+        let rect_shader = Shader::new(format!("{}/rect.vert", env!("CARGO_MANIFEST_DIR")).as_str(), format!("{}/rect.frag", env!("CARGO_MANIFEST_DIR")).as_str());
         let (texture_vao, texture_vbo, texture_ebo, texture_uv_vbo) = start_uv_elemnt_array();
         let (sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo) = start_uv_elemnt_array();
         let (triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo) = start_uv_elemnt_array();
         let (test_vao, test_vbo, test_ebo, test_color_vbo) = start_test_element_array();
+        let (rect_vao, rect_vbo, rect_ebo, rect_color_vbo) = start_test_element_array();
         let (triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo) = start_uv_3d_elemnt_array(3, 2);
         let projection = glam::Mat4::perspective_rh_gl(fov.to_radians(), screen_width as f32 / screen_height as f32, near_plane, far_plane);
         let orthographic_projection = glam::Mat4::orthographic_rh_gl(0.0, screen_width as f32, screen_height as f32, 0.0, -10000.0, 10000.0);
@@ -593,7 +611,7 @@ impl Renderer {
             0, 1, 2,
             2, 3, 0
         ], 
-        texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
+        texture_shader, texture_vao, texture_vbo, texture_ebo, texture_uv_vbo, sprite_vao, sprite_vbo, sprite_ebo, sprite_uv_vbo, triangle_shader, triangle_vao, triangle_vbo, triangle_ebo, triangle_uv_vbo, line_shader, rect_shader, rect_vao, rect_vbo, rect_ebo, rect_color_vbo, triangle3d_shader, triangle3d_vao, triangle3d_vbo, triangle3d_ebo, triangle3d_uv_vbo, test_shader, test_vao, test_vbo, test_ebo, test_color_vbo, screen_width, screen_height, fov, near_plane, far_plane }
     }
 
     pub fn set_projection(&mut self, projection: Mat4, fov: f32, near_plane: f32, far_plane: f32) {
@@ -657,8 +675,8 @@ impl Renderer {
     ///     // Most values here are arbitrary.
     /// }
     /// ```
-    pub fn draw_tileset(&mut self, tile: u32, tile_set: &mut surface::TileSet, x: f32, y: f32) {
-        let used_tile = &tile_set.tile_list[tile as usize];
+    pub fn draw_tileset(&mut self, tile: Tile, tile_set: &mut TileSet, x: f32, y: f32) {
+        let used_tile = &tile;
         let vertices = &used_tile.vertices;
 
         let model = Mat4::from_translation(glam::vec3(x, y, used_tile.vertices[0].2));
@@ -677,7 +695,7 @@ impl Renderer {
         }
     }
 
-    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(u32, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32, screen_width: u32, screen_height: u32) {
+    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(Tile, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32, screen_width: u32, screen_height: u32) {
         let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
         let borrowed_tileset = tile_set.borrow();
 
@@ -688,31 +706,31 @@ impl Renderer {
         let mut current_sprite = 0;
         
         for tile in &tiles {
-            let x = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1;
-            let y = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2;
-            let width = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1;
-            let height = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2;
-            let width_2 = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1 / 2.0;
-            let height_2 = borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2 / 2.0;
+            let x = tile.0.vertices[0].0 + tile.1;
+            let y = tile.0.vertices[0].1 + tile.2;
+            let width = tile.0.vertices[1].0 + tile.1;
+            let height = tile.0.vertices[2].1 + tile.2;
+            let width_2 = tile.0.vertices[1].0 + tile.1 / 2.0;
+            let height_2 = tile.0.vertices[2].1 + tile.2 / 2.0;
             if x + width_2 * 2.0 - offset_x > 0.0 
             && x - offset_x < self.screen_width as f32 
             && y + height_2 * 2.0 - offset_y > 0.0 
             && y - offset_y < self.screen_height as f32
             {
-                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[0].clone());
-                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[1].clone());
-                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[2].clone());
-                uvs.push(borrowed_tileset.tile_list[tile.0.to_owned() as usize].corners[3].clone());
+                uvs.push(tile.0.corners[0].clone());
+                uvs.push(tile.0.corners[1].clone());
+                uvs.push(tile.0.corners[2].clone());
+                uvs.push(tile.0.corners[3].clone());
                 if tile.3 {
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0 as usize].vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
+                    vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
                 } else {
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].2));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].2));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].2));
-                    vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].2));
+                    vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].2));
+                    vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[1].2));
+                    vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[2].2));
+                    vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[3].2));
                 }
                 indicies.push(current_sprite);
                 indicies.push(current_sprite + 1);
@@ -865,60 +883,60 @@ impl Renderer {
         }
     }
 
-    /// Draws a "complex" sprite list. It's faster than a regular sprite list, but it is simpler and has better support for now.
-    pub fn draw_complex_sprite_list(&mut self, sprite_list: &mut ComplexSpriteList, offset_x: f32, offset_y: f32) {
-        let mut vertices = vec![];
-        #[rustfmt::skip]
-        let mut indicies: Vec<u32> = vec![];
-        let mut uvs: Vec<Coordinate2D> = vec![];
+    // Draws a "complex" sprite list. It's faster than a regular sprite list, but it is simpler and has better support for now.
+    // pub fn draw_complex_sprite_list(&mut self, sprite_list: &mut ComplexSpriteList, offset_x: f32, offset_y: f32) {
+    //     let mut vertices = vec![];
+    //     #[rustfmt::skip]
+    //     let mut indicies: Vec<u32> = vec![];
+    //     let mut uvs: Vec<Coordinate2D> = vec![];
         
-        for tile in &sprite_list.sprite_list {
-            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[0].clone());
-            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[1].clone());
-            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[2].clone());
-            uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[3].clone());
-        }
+    //     for tile in &sprite_list.sprite_list {
+    //         uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[0].clone());
+    //         uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[1].clone());
+    //         uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[2].clone());
+    //         uvs.push(sprite_list.tile_set.tile_list[tile.1.to_owned() as usize].corners[3].clone());
+    //     }
          
-        let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
-        let mut current_sprite: u32 = 0;
+    //     let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
+    //     let mut current_sprite: u32 = 0;
         
-        for sprite in &sprite_list.sprite_list {
-            match &sprite.0 {
-                sprite::ComplexSprite::Surface(x, y, width, height, surface, _shader ) => {
-                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
-                }
-                sprite::ComplexSprite::Tile(x, y, width, height, tile_set, tile, _shader) => {
-                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
-                    vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
-                }
-            }
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 1);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite + 3);
-            current_sprite += 4;
-        }
+    //     for sprite in &sprite_list.sprite_list {
+    //         match &sprite.0 {
+    //             sprite::ComplexSprite::Surface(x, y, width, height, surface, _shader ) => {
+    //                 vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
+    //             }
+    //             sprite::ComplexSprite::Tile(x, y, width, height, tile_set, tile, _shader) => {
+    //                 vertices.push(Coordinate2D(x.to_owned(), y.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned() + width.to_owned(), y.to_owned() + height.to_owned()));
+    //                 vertices.push(Coordinate2D(x.to_owned(), y.to_owned() + height.to_owned()));
+    //             }
+    //         }
+    //         indicies.push(current_sprite);
+    //         indicies.push(current_sprite + 1);
+    //         indicies.push(current_sprite + 2);
+    //         indicies.push(current_sprite);
+    //         indicies.push(current_sprite + 2);
+    //         indicies.push(current_sprite + 3);
+    //         current_sprite += 4;
+    //     }
 
-        independent_update_uv_element_array_2d(&mut self.sprite_vao, &mut self.sprite_vbo, &mut self.sprite_ebo, &mut self.sprite_uv_vbo, vertices, uvs, &self.texture_indexes);
+    //     independent_update_uv_element_array_2d(&mut self.sprite_vao, &mut self.sprite_vbo, &mut self.sprite_ebo, &mut self.sprite_uv_vbo, vertices, uvs, &self.texture_indexes);
 
-        unsafe {
-            self.texture_shader.bind();
-            self.texture_shader.set_int("tex", 0);
-            self.texture_shader.set_mat4("model", model.to_cols_array());
-            self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
-            gl::ActiveTexture(gl::TEXTURE0);
-            sprite_list.tile_set.surface.bind();
-            gl::BindVertexArray(self.sprite_vao);
-            gl::DrawElements(gl::TRIANGLES, sprite_list.sprite_list.len() as i32 * 6, gl::UNSIGNED_INT, std::ptr::null());
-        }
-    }
+    //     unsafe {
+    //         self.texture_shader.bind();
+    //         self.texture_shader.set_int("tex", 0);
+    //         self.texture_shader.set_mat4("model", model.to_cols_array());
+    //         self.texture_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
+    //         gl::ActiveTexture(gl::TEXTURE0);
+    //         sprite_list.tile_set.surface.bind();
+    //         gl::BindVertexArray(self.sprite_vao);
+    //         gl::DrawElements(gl::TRIANGLES, sprite_list.sprite_list.len() as i32 * 6, gl::UNSIGNED_INT, std::ptr::null());
+    //     }
+    // }
 
     /// Draws a SpriteList.
     pub fn draw_sprite_list(&mut self, sprite_list: &mut SpriteList, offset_x: f32, offset_y: f32) {
@@ -928,7 +946,7 @@ impl Renderer {
 
         let mut tile_batches: HashMap<
         *const std::cell::RefCell<surface::TileSet>,
-        (Rc<RefCell<surface::TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
+        (Rc<RefCell<surface::TileSet>>, Vec<(Tile, f32, f32, bool, f32)>)
         > = HashMap::new();
         for sprite in &sprite_list.sprite_list {
             let x = sprite.get_x();
@@ -947,13 +965,13 @@ impl Renderer {
                 
                 match sprite {
                     // Surfaces → draw immediately
-                    Sprite::Surface(x, y, z, surface, _, _) => {
+                    Sprite::Surface(x, y, z, surface, _, _, ysort_origin) => {
                         surface.borrow_mut().set_z(*z);
                         self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
                     }
                     
                     // Tiles → batch them
-                    Sprite::Tile(x, y, z, tile_set, tile, _, ysort) => {
+                    Sprite::Tile(x, y, z, tile_set, tile, _, ysort, ysort_origin) => {
                         let key = std::rc::Rc::as_ptr(tile_set);
                         
                         let entry = tile_batches.entry(key).or_insert((
@@ -966,7 +984,7 @@ impl Renderer {
                             *x - offset_x,
                             *y - offset_y,
                             *ysort,
-                            *z
+                            *ysort_origin
                         ));
                     }
                     
@@ -996,33 +1014,38 @@ impl Renderer {
 
         for character in text.chars() {
             let ch = character.to_string();
-            let glyph = font.return_character_from_string(character).unwrap();
+            let fake_glyph = font.return_character_from_string(character);
+            match fake_glyph {
+                Ok(glyph) => {
+                    let uv = font.uvs.get(&character).unwrap();
+        
+                    uvs.push(Coordinate2D(uv[0].0, uv[0].1));
+                    uvs.push(Coordinate2D(uv[1].0, uv[1].1));
+                    uvs.push(Coordinate2D(uv[2].0, uv[2].1));
+                    uvs.push(Coordinate2D(uv[3].0, uv[3].1));
+        
+                    let y = 0.0;
+                    let w = glyph.width as f32;
+                    let h = glyph.height as f32;
+                                
+                    vertices.push(Coordinate2D(cursor_x as f32, 0.0));
+                    vertices.push(Coordinate2D(cursor_x as f32 + w * size, 0.0));
+                    vertices.push(Coordinate2D(cursor_x as f32 + w * size, h * size));
+                    vertices.push(Coordinate2D(cursor_x as f32, h * size));
+                    cursor_x += glyph.width * size as u32 + spacement;
+        
+                    indicies.push(current_sprite);
+                    indicies.push(current_sprite + 1);
+                    indicies.push(current_sprite + 2);
+                    indicies.push(current_sprite);
+                    indicies.push(current_sprite + 2);
+                    indicies.push(current_sprite + 3);
+        
+                    current_sprite += 4;
+                }
+                Err(err) => {}
+            };
 
-            let uv = font.uvs.get(&character).unwrap();
-
-            uvs.push(Coordinate2D(uv[0].0, uv[0].1));
-            uvs.push(Coordinate2D(uv[1].0, uv[1].1));
-            uvs.push(Coordinate2D(uv[2].0, uv[2].1));
-            uvs.push(Coordinate2D(uv[3].0, uv[3].1));
-
-            let y = 0.0;
-            let w = glyph.width as f32;
-            let h = glyph.height as f32;
-                        
-            vertices.push(Coordinate2D(cursor_x as f32, 0.0));
-            vertices.push(Coordinate2D(cursor_x as f32 + w * size, 0.0));
-            vertices.push(Coordinate2D(cursor_x as f32 + w * size, h * size));
-            vertices.push(Coordinate2D(cursor_x as f32, h * size));
-            cursor_x += glyph.width * size as u32 + spacement;
-
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 1);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite);
-            indicies.push(current_sprite + 2);
-            indicies.push(current_sprite + 3);
-
-            current_sprite += 4;
         }
          
         let model = Mat4::from_translation(glam::vec3(x, y, 0.0));
@@ -1043,19 +1066,16 @@ impl Renderer {
     }
 
     pub fn draw_line(&mut self, p1: Coordinate2D, p2: Coordinate2D, color: &Color, width: f32) {
-        let p1 = p1.return_into_gl_coordinates(self.screen_width, self.screen_height);
-        let p2 = p2.return_into_gl_coordinates(self.screen_width, self.screen_height);
-
         let data: Vec<f32> = vec![
             // position      // color
-            p1.0, p1.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0,
-            p2.0, p2.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0,
+            p1.0, p1.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0, color.a as f32 / 255.0,
+            p2.0, p2.1,     color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0, color.a as f32 / 255.0,
         ];
 
         unsafe {
             gl::LineWidth(width);
 
-            let stride = (5 * std::mem::size_of::<f32>()) as i32;
+            let stride = (6 * std::mem::size_of::<f32>()) as i32;
 
             gl::BindVertexArray(self.test_vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, self.test_vbo);
@@ -1074,15 +1094,22 @@ impl Renderer {
             // color
             gl::VertexAttribPointer(
                 1,
-                3,
+                4,
                 gl::FLOAT,
                 gl::FALSE,
                 stride,
                 (2 * std::mem::size_of::<f32>()) as *const _
             );
             gl::EnableVertexAttribArray(1);
-
-            self.test_shader.bind();
+            self.line_shader.bind();
+            self.line_shader.set_vec4(
+                "ourColor",
+                color.r as f32 / 255.0,
+                color.g as f32 / 255.0,
+                color.b as f32 / 255.0,
+                color.a as f32 / 255.0,
+            );
+            self.line_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
             gl::BindVertexArray(self.test_vao);
 
             gl::DrawArrays(gl::LINES, 0, 2);
@@ -1090,10 +1117,40 @@ impl Renderer {
     }
 
     pub fn draw_rect(&mut self, rect: &Rect, color: &Color, width: f32) {
+        if width == 0.0 {
+            let vertices: Vec<Coordinate2D> = vec![
+                Coordinate2D(rect.x, rect.y), 
+                Coordinate2D(rect.x + rect.width, rect.y),
+                Coordinate2D(rect.x + rect.width, rect.y + rect.height),
+                Coordinate2D(rect.x, rect.y + rect.height),
+            ];
+
+            update_element_array(&mut self.rect_vao, &mut self.rect_vbo, &mut self.rect_ebo, vertices, self.texture_indexes.to_owned());
+            
+            unsafe {
+                let stride = (2 * std::mem::size_of::<f32>()) as i32;
+
+                self.rect_shader.bind();
+                gl::BindVertexArray(self.rect_vao);
+                gl::EnableVertexAttribArray(0); 
+                gl::DisableVertexAttribArray(1);
+                gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
+                self.rect_shader.set_mat4("projection", self.orthographic_projection.to_cols_array());
+                self.rect_shader.set_vec4(
+                    "ourColor",
+                    color.r as f32 / 255.0,
+                    color.g as f32 / 255.0,
+                    color.b as f32 / 255.0,
+                    color.a as f32 / 255.0,
+                );
+                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+            }
+        } else {
         self.draw_line(Coordinate2D(rect.x, rect.y), Coordinate2D(rect.width + rect.x, rect.y), &color, width);
         self.draw_line(Coordinate2D(rect.x, rect.y), Coordinate2D(rect.x, rect.height + rect.y), &color, width);
         self.draw_line(Coordinate2D(rect.width + rect.x, rect.height + rect.y), Coordinate2D(rect.width + rect.x, rect.y), &color, width);
         self.draw_line(Coordinate2D(rect.width + rect.x, rect.height + rect.y), Coordinate2D(rect.x, rect.height + rect.y), &color, width);
+        }
     }
 }
 

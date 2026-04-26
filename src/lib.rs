@@ -56,6 +56,11 @@ impl CatEngine {
         }
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
+        let gl_attr = video_subsystem.gl_attr();
+        gl_attr.set_red_size(8);
+        gl_attr.set_green_size(8);
+        gl_attr.set_blue_size(8);
+        gl_attr.set_alpha_size(8);
 
         let window = video_subsystem
             .window(title, width, height)
@@ -75,11 +80,10 @@ impl CatEngine {
                 gl::Enable(gl::DEPTH_TEST);
                 gl::DepthFunc(gl::LESS);
             }
-            gl::Disable(gl::BLEND);
+            gl::Enable(gl::BLEND);
             gl::Disable(gl::CULL_FACE);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
-
         video_subsystem.gl_set_swap_interval(0); // vsync OFF
 
         if flags.contains(&CatEngineFlag::DynamicVsync) {
@@ -221,6 +225,18 @@ impl CatEngine {
 
     pub fn clear_text_input(&mut self) {
         self.input.zero_input();
+    }
+
+    pub fn enable_depth_test(&self) {
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST)
+        }
+    }
+
+    pub fn disable_depth_test(&self) {
+        unsafe {
+            gl::Disable(gl::DEPTH_TEST)
+        }
     }
 }
 

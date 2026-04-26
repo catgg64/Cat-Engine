@@ -2,77 +2,23 @@ use crate::math::Coordinate3D;
 use crate::{CatEngine, sprite};
 use crate::video::surface::{ TileSet, Tile };
 use crate::video::surface::Surface;
+use std::ops::Add;
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
 use super::video:: CatEngineShader ;
 
-pub enum ComplexSprite<'a> {
-    Surface(f32, f32, f32, f32, Surface, CatEngineShader),
-    Tile(f32, f32, f32, f32, &'a TileSet, u32, CatEngineShader),
-}
-
-pub struct ComplexSpriteList<'a> {
-    pub sprite_list: Vec<(ComplexSprite<'a>, u32)>,
-    pub tile_set: TileSet,
-}
-
-impl<'a> ComplexSpriteList<'a> {
-    pub fn new(mut sprite_list: Vec<ComplexSprite<'a>>) -> Self {
-        let (mut size_x, mut size_y): (u32, u32) = (0, 0);
-
-        for sprite in &sprite_list {
-            match &sprite {
-                ComplexSprite::Surface(x, y, _, _, surface, shader) => {
-                    size_x = size_x.saturating_add(surface.width);
-                    size_y = size_y.max(surface.height);
-                }
-                ComplexSprite::Tile(x, y, _, _, tile_set, tile, _) => {
-                    let t = &tile_set.tile_list[*tile as usize];
-                    size_x = size_x.saturating_add(t.width);
-                    size_y = size_y.max(t.height as u32);
-                }
-            }
-        }
-        
-        let mut main_tile_set = TileSet::new(size_x as usize, size_y as usize);
-        let mut offset_x_counter = 0;
-        let mut true_sprite_list: Vec<(ComplexSprite<'a>, u32)> = vec![];
-
-        for sprite in sprite_list {
-            true_sprite_list.push((sprite, 0));
-        }
-
-        for sprite in &mut true_sprite_list {
-            match &sprite.0 {
-                ComplexSprite::Surface(x, y, _, _, surface, _) => {
-                    main_tile_set.blit(&surface, offset_x_counter, 0);
-                    sprite.1 = main_tile_set.simple_append_tile(offset_x_counter, 0, 0.0, surface.width, surface.height);
-                    offset_x_counter += surface.width;
-                }
-                ComplexSprite::Tile(x, y, _, _, tile_set, tile, _) => {
-                    let used_tile = &tile_set.tile_list[*tile as usize];
-                    main_tile_set.blit(&tile_set.surface.return_true_crop(used_tile.x, used_tile.y, used_tile.width, used_tile.height), offset_x_counter, 0);
-                    sprite.1 = main_tile_set.simple_append_tile(offset_x_counter, 0, 0.0, used_tile.width, used_tile.height);
-                    offset_x_counter += tile_set.tile_list[*tile as usize].width;
-                }
-            }
-        }
-        Self { sprite_list: true_sprite_list, tile_set: main_tile_set }
-    }
-}
-
 pub enum Sprite {
-    Surface(f32, f32, f32, Rc<RefCell<Surface>>, CatEngineShader, bool),
-    Tile(f32, f32, f32, Rc<RefCell<TileSet>>, u32, CatEngineShader, bool),
-    Batch(Rc<RefCell<TileSet>>, Vec<(u32, f32, f32, bool, f32)>)
+    Surface(f32, f32, f32, Rc<RefCell<Surface>>, CatEngineShader, bool, f32),
+    Tile(f32, f32, f32, Rc<RefCell<TileSet>>, Tile, CatEngineShader, bool, f32),
+    Batch(Rc<RefCell<TileSet>>, Vec<(Tile, f32, f32, bool, f32)>)
 }
 
 
 impl Sprite {
     pub fn get_x(&self) -> f32 {
         match self {
-            Sprite::Surface(x, _, _, _, _, _) => *x,
-            Sprite::Tile(x, _, _, _, _, _, _) => *x,
+            Sprite::Surface(x, _, _, _, _, _, _) => *x,
+            Sprite::Tile(x, _, _, _, _, _, _, _) => *x,
             Sprite::Batch(tile_set, tiles) => {
                 let mut lowest: f32 = 0.0;
                 let mut vertices: Vec<Coordinate3D> = vec![];
@@ -80,15 +26,15 @@ impl Sprite {
 
                 for tile in tiles.iter() {
                     if tile.3 {
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
+                        vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
                     } else {
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[0].2));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[1].2));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[2].2));
-                        vertices.push(Coordinate3D(borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].0 + tile.1, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].1 + tile.2, borrowed_tileset.tile_list[tile.0.to_owned() as usize].vertices[3].2));
+                        vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].2));
+                        vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[1].2));
+                        vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[2].2));
+                        vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[3].2));
                     }
                 }
 
@@ -105,60 +51,77 @@ impl Sprite {
     
     pub fn get_y(&self) -> f32 {
         match self {
-            Sprite::Surface(_, y, _, _, _, _,) => *y,
-            Sprite::Tile(_, y, _, _, _, _, _) => *y,
+            Sprite::Surface(_, y, _, _, _, _, _) => *y,
+            Sprite::Tile(_, y, _, _, _, _, _, _) => *y,
             Sprite::Batch(_, _) => {0.0},
         }
     }
 
     pub fn get_z(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, z, _, _, _) => *z,
-            Sprite::Tile(_, _, z, _, _, _, _) => *z,
+            Sprite::Surface(_, _, z, _, _, _, _) => *z,
+            Sprite::Tile(_, _, z, _, _, _, _, _) => *z,
             Sprite::Batch(_, _) => {0.0},
         }
     }
 
     pub fn get_width(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().width as f32,
-            Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_width as f32,
+            Sprite::Surface(_, _, _, surface, _, _, _) => surface.borrow().width as f32,
+            Sprite::Tile(_, _, _, tile_set, tile, _, _, _) => tile.visual_width as f32,
             Sprite::Batch(_, _) => {0.0},
         }
     }
     
     pub fn get_height(&self) -> f32 {
         match self {
-            Sprite::Surface(_, _, _, surface, _, _) => surface.borrow().height as f32,
-            Sprite::Tile(_, _, _, tile_set, tile, _, _) => tile_set.borrow().tile_list[*tile as usize].visual_height as f32,
+            Sprite::Surface(_, _, _, surface, _, _, _) => surface.borrow().height as f32,
+            Sprite::Tile(_, _, _, tile_set, tile, _, _, _) => tile.visual_height as f32,
             Sprite::Batch(_, _) => {0.0},
         }
     }
 
     pub fn get_ysort(&self) -> bool {
         match self {
-            Sprite::Surface(_, _, _, _, _, ysort) => *ysort,
-            Sprite::Tile(_, _, _, _, _, _, ysort) => *ysort,
+            Sprite::Surface(_, _, _, _, _, ysort, _) => *ysort,
+            Sprite::Tile(_, _, _, _, _, _, ysort, _) => *ysort,
             Sprite::Batch(_, _) => {false},
         }
     }
 
     pub fn set_z(&mut self, z: f32) {
         match self {
-            Sprite::Surface(_, _, t, _, _, _) => *t = z,
-            Sprite::Tile(_, _, t, _, _, _, _) => *t = z,
+            Sprite::Surface(_, _, t, _, _, _, _) => *t = z,
+            Sprite::Tile(_, _, t, _, _, _, _, _) => *t = z,
             Sprite::Batch(_, _) => {},
         }
     }
 
     pub fn is_not_batch(& self) -> bool {
         match self {
-            Sprite::Surface(_, _, _, _, _, _) => true,
-            Sprite::Tile(_, _, _, _, _, _, _) => true,
+            Sprite::Surface(_, _, _, _, _, _, _) => true,
+            Sprite::Tile(_, _, _, _, _, _, _, _) => true,
             Sprite::Batch(_, _) => {false},
         }
     }
 }
+
+impl Clone for Sprite {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Surface(x, y, z, surface, shader, ysort, ysort_origin) => {
+                Self::Surface(x.clone(), y.clone(), z.clone(), surface.clone(), CatEngineShader::TextureShader, ysort.clone(), ysort_origin.clone())
+            }
+            Self::Tile(x, y, z, tile_set, tile, shader, ysort, ysort_origin) => {
+                Self::Tile(x.clone(), y.clone(), z.clone(), tile_set.clone(), tile.clone(), CatEngineShader::TextureShader, ysort.clone(), ysort_origin.clone())
+            }
+            Self::Batch(tile_set, tiles) => {
+                Self::Batch(tile_set.clone(), tiles.clone())
+            }
+        }
+    }
+}
+
 pub struct SpriteList {
     pub sprite_list: Vec<Sprite>
 }
@@ -175,6 +138,16 @@ impl SpriteList {
             }
         }
         self.sprite_list = sprite_list;
+    }
+
+    /// Clones the value instead of moving it.
+    pub fn clone_update(&mut self, mut sprite_list: Vec<Sprite>) {
+        for sprite in sprite_list.iter_mut() {
+            if sprite.get_ysort() {
+                sprite.set_z(sprite.get_y() + sprite.get_height());
+            }
+        }
+        self.sprite_list = sprite_list.clone();
     }
 
     pub fn sort_by_z(&mut self) {

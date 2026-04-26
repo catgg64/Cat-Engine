@@ -7,6 +7,8 @@ pub struct Surface {
     pub corners:  [Coordinate2D; 4],
     pub vertices: [Coordinate3D; 4],
     pub data: Vec<u8>,
+    pub flipped_x: bool,
+    pub flipped_y: bool,
 }
 
 impl Surface {
@@ -53,7 +55,7 @@ impl Surface {
             Coordinate3D(0.0, height as f32, 0.0),
         ];
 
-        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data }
+        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data, flipped_x: false, flipped_y: false }
     }
 
     pub fn from_width_height_verticies_data(width: usize, vertices: [Coordinate3D; 4], corners: [Coordinate2D; 4], data: Vec<u8>, height: usize) -> Self {
@@ -78,7 +80,7 @@ impl Surface {
                            data.as_ptr() as *const _);
         }
 
-        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data }
+        Self { texture_id, width: width as u32, height: height as u32, corners, vertices, data, flipped_x: false, flipped_y: false }
     }
 
     /// Starts a surface from a texture.
@@ -129,7 +131,9 @@ impl Surface {
             height,
             corners,
             vertices,
-            data,
+            data, 
+            flipped_x: false, 
+            flipped_y: false
         }
     }
 
@@ -202,11 +206,27 @@ impl Surface {
         for corner in self.corners.iter_mut() {
             corner.1 = 1.0 - corner.1;
         }
+        if self.flipped_y == false 
+        {
+            self.flipped_y = true
+        }
+        else
+        {
+            self.flipped_y = false
+        }
     }
 
     pub fn fliph(&mut self) {
         for corner in self.corners.iter_mut() {
             corner.0 = 1.0 - corner.0;
+        }
+        if self.flipped_x == false 
+        {
+            self.flipped_x = true
+        }
+        else
+        {
+            self.flipped_x = false
         }
     }
 
@@ -280,37 +300,14 @@ impl Tile {
         
         Self { corners: used_corners, vertices: used_vertices, x, y, width, height, visual_width: width as f32, visual_height: height as f32 }
     }
-}
 
-pub struct TileSet {
-    pub tile_list: Vec<Tile>,
-    pub surface: Surface,
-    pub width: u32,
-    pub height: u32,
-}
-
-impl TileSet {
-    pub fn new(width: usize, height: usize) -> Self {
-        let mut surface = Surface::new(width, height);
-        Self { tile_list: vec![], surface, width: width as u32, height: height as u32 }
-    }
-
-    pub fn from_texture(path: &str) -> Self {
-        let mut surface = Surface::from_texture(path);
-        let (width, height) = (surface.width, surface.height);
-        let mut tile_list: Vec<Tile> = vec![];
-
-        Self { tile_list, surface, width, height }
-    }
-
-    pub fn simple_append_tile(&mut self, x: u32, y: u32, z: f32, width: u32, height: u32) -> u32 {
-        self.tile_list.push(
-            Tile { corners: [
+    pub fn simple_new(x: u32, y: u32, z: f32, width: u32, height: u32, tile_set: &TileSet) -> Self {
+        Tile { corners: [
                 // Nah bru i give up just asking gpt this shi man
-                Coordinate2D(x as f32 / self.surface.width as f32, y as f32 / self.surface.height as f32),
-                Coordinate2D((x as f32 + width as f32) / self.surface.width as f32, y as f32 / self.surface.height as f32),
-                Coordinate2D((x as f32 + width as f32) / self.surface.width as f32, (y as f32 + height as f32) / self.surface.height as f32),
-                Coordinate2D(x as f32 / self.surface.width as f32, (y as f32 + height as f32) / self.surface.height as f32),
+                Coordinate2D(x as f32 / tile_set.surface.width as f32, y as f32 / tile_set.surface.height as f32),
+                Coordinate2D((x as f32 + width as f32) / tile_set.surface.width as f32, y as f32 / tile_set.surface.height as f32),
+                Coordinate2D((x as f32 + width as f32) / tile_set.surface.width as f32, (y as f32 + height as f32) / tile_set.surface.height as f32),
+                Coordinate2D(x as f32 / tile_set.surface.width as f32, (y as f32 + height as f32) / tile_set.surface.height as f32),
                 ], 
             vertices: [
                 Coordinate3D(0.0, 0.0, z),
@@ -324,39 +321,39 @@ impl TileSet {
             height,
             visual_width: width as f32, 
             visual_height: height as f32
-            }
-        );
-        (self.tile_list.len() - (1 as usize)) as u32
+        }
     }
 
-    pub fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
-        self.surface.blit(&surface, offset_x, offset_y);
-    }
-
-    pub fn append_tile(&mut self, tile: Tile) -> u32 {
-        self.tile_list.push(tile);
-        (self.tile_list.len() - (1 as usize)) as u32
-    }
-
-    pub fn stretch_tile(&mut self, tile: u32, width: i32, height: i32) {
-        self.tile_list[tile as usize].vertices = [
+    pub fn stretch(&mut self, width: f32, height: f32) {
+        self.vertices = [
             Coordinate3D(0.0, 0.0, 0.0),
             Coordinate3D(width as f32, 0.0, 0.0),
             Coordinate3D(width as f32, height as f32, 0.0),
             Coordinate3D(0.0, height as f32, 0.0),
         ];
-        self.tile_list[tile as usize].visual_width = width as f32;
-        self.tile_list[tile as usize].visual_height = height as f32;
+        self.visual_width = width as f32;
+        self.visual_height = height as f32;
     }
 
-    pub fn set_tile_z(&mut self, tile: u32, z: f32) {
-        for vertex in self.tile_list[tile as usize].vertices.iter_mut() {
+    pub fn set_z(&mut self, z: f32) {
+        for vertex in self.vertices.iter_mut() {
             vertex.2 = z;
         }
     }
 
-    pub fn flipv_tile(&mut self, tile: u32) {
-        let corners = &mut self.tile_list[tile as usize].corners;
+    pub fn fliph(&mut self) {
+        let corners = &mut self.corners;
+
+        let min_x = corners.iter().map(|c| c.0).fold(f32::INFINITY, f32::min);
+        let max_x = corners.iter().map(|c| c.0).fold(f32::NEG_INFINITY, f32::max);
+
+        for corner in corners.iter_mut() {
+            corner.0 = min_x + max_x - corner.0;
+        }
+    }
+
+    pub fn flipv(&mut self) {
+        let corners = &mut self.corners;
 
         let min_y = corners.iter().map(|c| c.1).fold(f32::INFINITY, f32::min);
         let max_y = corners.iter().map(|c| c.1).fold(f32::NEG_INFINITY, f32::max);
@@ -366,19 +363,36 @@ impl TileSet {
         }
     }
 
-    pub fn fliph_tile(&mut self, tile: u32) {
-        let corners = &mut self.tile_list[tile as usize].corners;
-
-        let min_x = corners.iter().map(|c| c.0).fold(f32::INFINITY, f32::min);
-        let max_x = corners.iter().map(|c| c.0).fold(f32::NEG_INFINITY, f32::max);
-
-        for corner in corners.iter_mut() {
-            corner.0 = min_x + max_x - corner.0;
-        }
+    pub fn get_rect(&self) -> Rect {
+        Rect { x: 0.0, y: 0.0, width: self.vertices[1].0, height: self.vertices[2].1 }
     }
+}
+
+impl Copy for Tile {
     
-    pub fn get_tile_rect(&self, tile: u32) -> Rect {
-        Rect { x: 0.0, y: 0.0, width: self.tile_list[tile as usize].vertices[1].0, height: self.tile_list[tile as usize].vertices[2].1 }
+}
+
+pub struct TileSet {
+    pub surface: Surface,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl TileSet {
+    pub fn new(width: usize, height: usize) -> Self {
+        let mut surface = Surface::new(width, height);
+        Self { surface, width: width as u32, height: height as u32 }
+    }
+
+    pub fn from_texture(path: &str) -> Self {
+        let mut surface = Surface::from_texture(path);
+        let (width, height) = (surface.width, surface.height);
+
+        Self { surface, width, height }
+    }
+
+    pub fn blit(&mut self, surface: &Surface, offset_x: u32, offset_y: u32) {
+        self.surface.blit(&surface, offset_x, offset_y);
     }
 }
 
