@@ -635,6 +635,10 @@ impl Renderer {
         }
     }
 
+    pub fn set_orthographic_projection(&mut self, rect: &Rect, near_plane: f32, far_plane: f32) {
+        self.orthographic_projection = glam::Mat4::orthographic_rh_gl(rect.x, rect.width, rect.height, rect.y, near_plane, far_plane);
+    }
+
     /// Blits a surface onto the screen. For proper Z control, use sprites.
     /// 
     /// # Examples
@@ -1119,9 +1123,9 @@ impl Renderer {
     pub fn draw_rect(&mut self, rect: &Rect, color: &Color, width: f32) {
         if width == 0.0 {
             let vertices: Vec<Coordinate2D> = vec![
-                Coordinate2D(rect.x, rect.y), 
+                Coordinate2D(rect.x - width / 2.0, rect.y - width / 2.0), 
                 Coordinate2D(rect.x + rect.width, rect.y),
-                Coordinate2D(rect.x + rect.width, rect.y + rect.height),
+                Coordinate2D(rect.x + rect.width - width / 2.0, rect.y + rect.height - width / 2.0),
                 Coordinate2D(rect.x, rect.y + rect.height),
             ];
 

@@ -2,7 +2,7 @@
 #![allow(warnings)]
 
 use glam::Mat4;
-use crate::{video::Renderer};
+use crate::{math::Rect, video::Renderer};
 
 pub mod pixel;
 pub mod video;

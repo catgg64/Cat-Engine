@@ -84,6 +84,18 @@ impl CatEngine {
                 "right" => {Scancode::Right}
                 "backspace" => {Scancode::Backspace}
                 "escape" => {Scancode::Escape}
+                "f1" => {Scancode::F1}
+                "f2" => {Scancode::F2}
+                "f3" => {Scancode::F3}
+                "f4" => {Scancode::F4}
+                "f5" => {Scancode::F5}
+                "f6" => {Scancode::F6}
+                "f7" => {Scancode::F7}
+                "f8" => {Scancode::F8}
+                "f9" => {Scancode::F9}
+                "f10" => {Scancode::F10}
+                "f11" => {Scancode::F11}
+                "f12" => {Scancode::F12}
                 _ => {
                     panic!("no key named {}", key);
                 }
@@ -126,6 +138,18 @@ impl CatEngine {
                 "right" => {Keycode::Right}
                 "backspace" => {Keycode::Backspace}
                 "escape" => {Keycode::Escape}
+                "f1" => {Keycode::F1}
+                "f2" => {Keycode::F2}
+                "f3" => {Keycode::F3}
+                "f4" => {Keycode::F4}
+                "f5" => {Keycode::F5}
+                "f6" => {Keycode::F6}
+                "f7" => {Keycode::F7}
+                "f8" => {Keycode::F8}
+                "f9" => {Keycode::F9}
+                "f10" => {Keycode::F10}
+                "f11" => {Keycode::F11}
+                "f12" => {Keycode::F12}
                 _ => {
                     panic!("no key named {}", key);
                 }
@@ -223,6 +247,11 @@ impl CatEngine {
 
     fn blit_rect(&mut self, rect: &Rect, r: u8, g: u8, b: u8, a: u8, width: f32) {
         self.engine.renderer.draw_rect(&rect.into_rect(), &Color{ r, g, b, a }, width);
+    }
+
+    fn set_orthographic_projection(&mut self, rect: &Rect, near_plane: f32, far_plane: f32) {
+        let used_rect = Rect::new(rect.x, rect.y, rect.width + rect.x, rect.height + rect.y);
+        self.engine.renderer.set_orthographic_projection(&used_rect.into_rect(), near_plane, far_plane);
     }
 }
 
