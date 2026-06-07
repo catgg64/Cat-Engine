@@ -33,6 +33,10 @@ impl CatEngine {
         self.engine.update();
     }
 
+    fn stop(&mut self) {
+        self.engine.stop();
+    }
+
     fn enable_fullscreen(&mut self) {
         self.engine.enable_fullscreen();
     }

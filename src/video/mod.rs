@@ -1014,7 +1014,7 @@ impl Renderer {
         
         let mut current_sprite: u32 = 0;
         let mut uvs: Vec<Coordinate2D> = vec![];
-        let mut cursor_x = 0;
+        let mut cursor_x = 0.0;
 
         for character in text.chars() {
             let ch = character.to_string();
@@ -1036,7 +1036,7 @@ impl Renderer {
                     vertices.push(Coordinate2D(cursor_x as f32 + w * size, 0.0));
                     vertices.push(Coordinate2D(cursor_x as f32 + w * size, h * size));
                     vertices.push(Coordinate2D(cursor_x as f32, h * size));
-                    cursor_x += glyph.width * size as u32 + spacement;
+                    cursor_x += glyph.width as f32 * size + spacement as f32;
         
                     indicies.push(current_sprite);
                     indicies.push(current_sprite + 1);

@@ -127,6 +127,11 @@ impl CatEngine {
         self.screen_height = self.input.height;
     }
 
+    /// Closes the engine.
+    pub fn stop(&mut self) {
+        self.running = false;
+    }
+
     /// Clears the whole screen. Should be done every frame before rendering is done.
     pub fn clear_screen(&self, color: pixel::Color) {
         let (true_color_r, true_color_g, true_color_b, true_color_a) = (color.r as f32 / 255.0, color.g as f32 / 255.0, color.b as f32 / 255.0, color.a as f32 / 255.0);
