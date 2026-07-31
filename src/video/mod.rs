@@ -699,7 +699,7 @@ impl Renderer {
         }
     }
 
-    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(Tile, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32, screen_width: u32, screen_height: u32) {
+    pub fn draw_tile_list(&mut self, tile_set: std::rc::Rc<std::cell::RefCell<surface::TileSet>>, tiles: Vec<(Tile, f32, f32, f32, bool, f32)>, offset_x: f32, offset_y: f32, screen_width: u32, screen_height: u32) {
         let model = Mat4::from_translation(glam::vec3(offset_x, offset_y, 0.0));
         let borrowed_tileset = tile_set.borrow();
 
@@ -712,6 +712,7 @@ impl Renderer {
         for tile in &tiles {
             let x = tile.0.vertices[0].0 + tile.1;
             let y = tile.0.vertices[0].1 + tile.2;
+            let ysorty = tile.5;
             let width = tile.0.vertices[1].0 + tile.1;
             let height = tile.0.vertices[2].1 + tile.2;
             let width_2 = tile.0.vertices[1].0 + tile.1 / 2.0;
@@ -720,16 +721,17 @@ impl Renderer {
             && x - offset_x < self.screen_width as f32 
             && y + height_2 * 2.0 - offset_y > 0.0 
             && y - offset_y < self.screen_height as f32
-            {
+            { 
+
                 uvs.push(tile.0.corners[0].clone());
                 uvs.push(tile.0.corners[1].clone());
                 uvs.push(tile.0.corners[2].clone());
                 uvs.push(tile.0.corners[3].clone());
-                if tile.3 {
-                    vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
-                    vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.4));
+                if tile.4 {
+                    vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.5));
+                    vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.5));
+                    vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.5));
+                    vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[2].1 + tile.2 + tile.5));
                 } else {
                     vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].2));
                     vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[1].2));
@@ -950,18 +952,19 @@ impl Renderer {
 
         let mut tile_batches: HashMap<
         *const std::cell::RefCell<surface::TileSet>,
-        (Rc<RefCell<surface::TileSet>>, Vec<(Tile, f32, f32, bool, f32)>)
+        (Rc<RefCell<surface::TileSet>>, Vec<(Tile, f32, f32, f32, bool, f32)>)
         > = HashMap::new();
         for sprite in &sprite_list.sprite_list {
             let x = sprite.get_x();
             let y = sprite.get_y();
             let width = sprite.get_width();
             let height = sprite.get_height();
-            
-            // CULLING (same as yours)
+            let ysorty = sprite.get_ysort_y();
+
+            // CULLING
             if !(x + width * 2.0 - offset_x > 0.0 
                 && x - offset_x < self.screen_width as f32 
-                && (y + height) * 2.0 - offset_y > 0.0 
+                && y + height * 2.0 - offset_y > 0.0 
                 && y - offset_y < self.screen_height as f32)
                 || !sprite.is_not_batch() {
                     continue;
@@ -969,7 +972,7 @@ impl Renderer {
                 
                 match sprite {
                     // Surfaces → draw immediately
-                    Sprite::Surface(x, y, z, surface, _, _, ysort_origin) => {
+                    Sprite::Surface(x, y, z, surface, _, ysort, ysort_origin) => {
                         surface.borrow_mut().set_z(*z);
                         self.blit(&surface.borrow(), *x - offset_x, *y - offset_y);
                     }
@@ -987,6 +990,7 @@ impl Renderer {
                             *tile,
                             *x - offset_x,
                             *y - offset_y,
+                            *z,
                             *ysort,
                             *ysort_origin
                         ));

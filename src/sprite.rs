@@ -10,7 +10,7 @@ use super::video:: CatEngineShader ;
 pub enum Sprite {
     Surface(f32, f32, f32, Rc<RefCell<Surface>>, CatEngineShader, bool, f32),
     Tile(f32, f32, f32, Rc<RefCell<TileSet>>, Tile, CatEngineShader, bool, f32),
-    Batch(Rc<RefCell<TileSet>>, Vec<(Tile, f32, f32, bool, f32)>)
+    Batch(Rc<RefCell<TileSet>>, Vec<(Tile, f32, f32, f32, bool, f32)>)
 }
 
 
@@ -25,11 +25,11 @@ impl Sprite {
                 let borrowed_tileset = tile_set.borrow();
 
                 for tile in tiles.iter() {
-                    if tile.3 {
-                        vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
-                        vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.4));
+                    if tile.4 {
+                        vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.5));
+                        vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.5));
+                        vertices.push(Coordinate3D(tile.0.vertices[2].0 + tile.1, tile.0.vertices[2].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.5));
+                        vertices.push(Coordinate3D(tile.0.vertices[3].0 + tile.1, tile.0.vertices[3].1 + tile.2, tile.0.vertices[0].1 + tile.2 + tile.5));
                     } else {
                         vertices.push(Coordinate3D(tile.0.vertices[0].0 + tile.1, tile.0.vertices[0].1 + tile.2, tile.0.vertices[0].2));
                         vertices.push(Coordinate3D(tile.0.vertices[1].0 + tile.1, tile.0.vertices[1].1 + tile.2, tile.0.vertices[1].2));
@@ -89,6 +89,14 @@ impl Sprite {
         }
     }
 
+    pub fn get_ysort_y(&self) -> f32 {
+        match self {
+            Sprite::Surface(_, _, _, _, _, _, ysorty) => *ysorty,
+            Sprite::Tile(_, _, _, _, _, _, _, ysorty) => *ysorty,
+            Sprite::Batch(_, _) => 0.0,
+        }
+    }
+
     pub fn set_z(&mut self, z: f32) {
         match self {
             Sprite::Surface(_, _, t, _, _, _, _) => *t = z,
@@ -134,7 +142,7 @@ impl SpriteList {
     pub fn update(&mut self, mut sprite_list: Vec<Sprite>) {
         for sprite in sprite_list.iter_mut() {
             if sprite.get_ysort() {
-                sprite.set_z(sprite.get_y() + sprite.get_height());
+                sprite.set_z(sprite.get_y() + sprite.get_height() + sprite.get_ysort_y());
             }
         }
         self.sprite_list = sprite_list;
@@ -144,7 +152,7 @@ impl SpriteList {
     pub fn clone_update(&mut self, mut sprite_list: Vec<Sprite>) {
         for sprite in sprite_list.iter_mut() {
             if sprite.get_ysort() {
-                sprite.set_z(sprite.get_y() + sprite.get_height());
+                sprite.set_z(sprite.get_y() + sprite.get_height() + sprite.get_ysort_y());
             }
         }
         self.sprite_list = sprite_list.clone();

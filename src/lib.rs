@@ -2,7 +2,11 @@
 #![allow(warnings)]
 
 use glam::Mat4;
+use sdl2::{sys::SDL_CloseAudio};
 use crate::{math::Rect, video::Renderer};
+use sdl2::pixels::PixelFormatEnum;
+use sdl2::surface::Surface;
+use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
 
 pub mod pixel;
 pub mod video;
@@ -11,6 +15,7 @@ pub mod input;
 pub mod mesh;
 pub mod sprite;
 pub mod font;
+pub mod mixer;
 
 #[derive(PartialEq)]
 pub enum CatEngineFlag {
@@ -37,6 +42,7 @@ pub struct CatEngine {
     pub screen_width: u32,
     pub screen_height: u32,
     pub stretch_mode: String,
+    pub audio_manager: mixer::AudioManager,
 }
 
 impl CatEngine {
@@ -61,6 +67,18 @@ impl CatEngine {
         gl_attr.set_green_size(8);
         gl_attr.set_blue_size(8);
         gl_attr.set_alpha_size(8);
+
+        std::panic::set_hook(Box::new(|panic_info| {
+            let msg = format!("{} \nPlease report this bug.", panic_info);
+
+            let _ = show_simple_message_box(
+                MessageBoxFlag::ERROR,
+                "CatEngine crashed",
+                &msg,
+                None,
+            );
+        }));
+
 
         let window = video_subsystem
             .window(title, width, height)
@@ -116,6 +134,7 @@ impl CatEngine {
             screen_width: width,
             screen_height: height,
             stretch_mode: stretch_mode.to_string(),
+            audio_manager: mixer::AudioManager::new(),
         })
     }
 
@@ -125,10 +144,14 @@ impl CatEngine {
         self.running = self.input.update(&mut self.event_pump, &mut self.renderer, &self.stretch_mode);
         self.screen_width = self.input.width;
         self.screen_height = self.input.height;
+
+        self.audio_manager.sounds.retain(|_, sink| !sink.empty());
     }
 
     /// Closes the engine.
     pub fn stop(&mut self) {
+        
+        self.audio_manager.shutdown();
         self.running = false;
     }
 
@@ -242,6 +265,36 @@ impl CatEngine {
         unsafe {
             gl::Disable(gl::DEPTH_TEST)
         }
+    }
+
+    pub fn set_icon(&mut self, file: &str) {
+        let img = image::open(file)
+            .unwrap()
+            .to_rgba8();
+
+        let (w, h) = img.dimensions();
+
+        let mut surface = Surface::new(
+            w,
+            h,
+            PixelFormatEnum::RGBA32,
+        ).unwrap();
+
+        surface.with_lock_mut(|buffer| {
+            buffer.copy_from_slice(&img);
+        });
+        self.window.set_icon(surface);
+    }
+
+    pub fn show_simple_message_box(&self, text: &str, title: &str, type_: MessageBoxFlag) {
+        let msg = format!("{}", text);
+
+        let _ = show_simple_message_box(
+            type_,
+            title,
+            &msg,
+            None,
+        );
     }
 }
 

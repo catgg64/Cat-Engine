@@ -1,4 +1,5 @@
 use std::{rc::Rc, cell::{RefCell, Ref}, vec};
+use crate::{MessageBoxFlag};
 
 use pyo3::prelude::*;
 use crate::{
@@ -256,6 +257,22 @@ impl CatEngine {
     fn set_orthographic_projection(&mut self, rect: &Rect, near_plane: f32, far_plane: f32) {
         let used_rect = Rect::new(rect.x, rect.y, rect.width + rect.x, rect.height + rect.y);
         self.engine.renderer.set_orthographic_projection(&used_rect.into_rect(), near_plane, far_plane);
+    }
+
+    fn play_sound(&mut self, file: &str) -> u32 {
+        self.engine.audio_manager.play_sound(file)
+    }
+
+    fn stop_sound(&mut self, id: u32) {
+        self.engine.audio_manager.stop_sound(id);
+    }
+    
+    fn set_icon(&mut self, file: &str) {
+        self.engine.set_icon(file);
+    }
+
+    fn show_simple_message_box(&self, text: String, title: String, type_: String) {
+        self.engine.show_simple_message_box(&text.to_string(), &title.to_string(), {match type_ {val if val == "ERROR".to_string() => MessageBoxFlag::ERROR, _ => MessageBoxFlag::ERROR}})
     }
 }
 
