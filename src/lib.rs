@@ -1,6 +1,6 @@
-use std::{sync::Arc, rc::Rc};
+use std::{println, sync::Arc};
 use anyhow::{Ok, Error};
-use winit::{application::ApplicationHandler, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
+use winit::{application::ApplicationHandler, dpi::{PhysicalPosition, PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, platform::x11::WindowAttributesExtX11, window::Window};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -12,7 +12,7 @@ pub struct CatEngine {
 }
 
 impl CatEngine {
-    pub fn new(width: u32, height: u32) -> Result<CatEngine, (Error)> {
+    pub fn new(width: u32, height: u32) -> Result<CatEngine, Error> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -27,16 +27,14 @@ impl CatEngine {
         {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let mut app = App::new();
+                let mut app = App::new(width, height);
                 event_loop.run_app(&mut app)?;
-                app.resize(width, height);
                 app
             }
             #[cfg(target_arch = "wasm32")]
             {
-                let app = App::new(&event_loop);
+                let app = App::new(&event_loop, width, height);
                 event_loop.spawn_app(app);
-                app.resize(width, height);
                 app
             }
         };
@@ -44,6 +42,10 @@ impl CatEngine {
         Ok(Self{app})
     }
 }
+
+//pub trait Program {
+//    fn update
+//}
 
 // this will store the state of the game
 pub struct State {
@@ -230,16 +232,20 @@ pub struct App {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     pub state: Option<State>,
+    width: u32,
+    height: u32,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, width: u32, height: u32) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
             state: None,
             #[cfg(target_arch = "wasm32")]
             proxy,
+            width,
+            height,
         }
     }
 
@@ -256,7 +262,7 @@ impl App {
 impl ApplicationHandler<State> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         #[allow(unused_mut)]
-        let mut window_attributes = Window::default_attributes();
+        let mut window_attributes = Window::default_attributes().with_inner_size(PhysicalSize::new(self.width, self.height));
 
         #[cfg(target_arch = "wasm32")]
         {
@@ -359,12 +365,12 @@ pub fn run() -> anyhow::Result<()> {
     let event_loop = EventLoop::with_user_event().build()?;
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let mut app = App::new();
+        let mut app = App::new(400, 400);
         event_loop.run_app(&mut app)?;
     }
     #[cfg(target_arch = "wasm32")]
     {
-        let app = App::new(&event_loop);
+        let app = App::new(&event_loop, 400, 400);
         event_loop.spawn_app(app);
     }
 
