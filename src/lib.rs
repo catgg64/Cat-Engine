@@ -7,12 +7,12 @@ use wasm_bigen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use winit::{event_loop, platform::web::EventLoopExtWebSys};
 
-pub struct CatEngine {
+pub struct CatEngineInit {
     pub app: App, 
 }
 
-impl CatEngine {
-    pub fn new(program: Box<dyn Program>, width: u32, height: u32) -> Result<CatEngine, Error> {
+impl CatEngineInit {
+    pub fn start(program: Box<dyn Program>, width: u32, height: u32) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -22,13 +22,13 @@ impl CatEngine {
             console_log::init_with_level(log::Level::Info).unwrap_throw();
         }
 
-        let event_loop = EventLoop::with_user_event().build()?;
+        let event_loop = EventLoop::with_user_event().build();
         let mut app = 
         {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let mut app = App::new(program, width, height);
-                event_loop.run_app(&mut app)?;
+                event_loop.expect("event loop").run_app(&mut app);
                 app
             }
             #[cfg(target_arch = "wasm32")]
@@ -38,31 +38,20 @@ impl CatEngine {
                 app
             }
         };
-
-        Ok(Self{app})
     }
 }
 
-pub trait Program {
-    fn update(&mut self);
-}
-
-// this will store the state of the game
-pub struct State {
+pub struct CatEngine {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
     window: Arc<Window>,
-    program: Box<dyn Program>,
-    pub mouse_pos_x: f64,
-    pub mouse_pos_y: f64,
 }
 
-impl State {
-    pub async fn new(program: Box<dyn Program>, window: Arc<Window>) -> anyhow::Result<Self> {
-        
+impl CatEngine {
+    async fn new(window: Arc<Window>) -> Result<Self, Error> {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -87,7 +76,7 @@ impl State {
                 force_fallback_adapter: false,
                 apply_limit_buckets: true,
             })
-            .await?;
+            .await.unwrap();
         
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -104,7 +93,7 @@ impl State {
                 memory_hints: Default::default(),
                 trace: wgpu::Trace::Off,
             })
-            .await?;
+            .await.unwrap();
 
 
         let surface_caps = surface.get_capabilities(&adapter);
@@ -132,40 +121,17 @@ impl State {
             device,
             queue,
             config,
-            program,
             is_surface_configured: false,
             window,
-            mouse_pos_x: 0.0,
-            mouse_pos_y: 0.0,
         })
-    }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            let max = 2048;
-            self.config.width = width.min(max);
-            self.config.height = height.min(max);
-            self.surface.configure(&self.device, &self.config);
-            self.is_surface_configured = true;
-        }
-    }
-
-
-    fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        match (code, is_pressed) {
-            (KeyCode::Escape, true) => event_loop.exit(),
-            _ => {}
-        }
-    }
-
-    fn handle_mouse_moved(&mut self, x: f64, y: f64) {
-        self.mouse_pos_x = x;
-        self.mouse_pos_y = y;
     }
     
-    fn render(&mut self) -> anyhow::Result<()> {
+    pub fn request_redraw(&mut self) {
         self.window.request_redraw();
+    }
 
+    pub fn clear_screen(&mut self, r: f64, g: f64, b: f64) -> Result<(), anyhow::Error>  {
         // We can't render unless the surface is configured
         if !self.is_surface_configured {
             return Ok(());
@@ -207,9 +173,9 @@ impl State {
                     depth_slice: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
+                            r,
+                            g,
+                            b,
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,
@@ -222,14 +188,60 @@ impl State {
                 });
             }
 
-        self.program.update();
-
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         self.queue.present(output);
 
         Ok(())
-        
+    }
+    
+    pub fn resize(&mut self, width: u32, height: u32) {
+        if width > 0 && height > 0 {
+            let max = 2048;
+            self.config.width = width.min(max);
+            self.config.height = height.min(max);
+            self.surface.configure(&self.device, &self.config);
+            self.is_surface_configured = true;
+        }
+    }
+}
+
+pub trait Program {
+    fn update(&mut self, engine: &mut CatEngine);
+}
+
+// this will store the state of the game
+pub struct State {
+    program: Box<dyn Program>,
+    pub engine: CatEngine,
+    pub mouse_pos_x: f64,
+    pub mouse_pos_y: f64,
+}
+
+impl State {
+    pub async fn new(program: Box<dyn Program>, window: Arc<Window>) -> anyhow::Result<Self> {        
+        Ok(Self {
+            program,
+            engine: CatEngine::new(window).await.unwrap(),
+            mouse_pos_x: 0.0,
+            mouse_pos_y: 0.0,
+        })
+    }
+
+    fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+        match (code, is_pressed) {
+            (KeyCode::Escape, true) => event_loop.exit(),
+            _ => {}
+        }
+    }
+
+    fn handle_mouse_moved(&mut self, x: f64, y: f64) {
+        self.mouse_pos_x = x;
+        self.mouse_pos_y = y;
+    }
+    
+    fn render(&mut self) {
+        self.program.update(&mut self.engine);
     }
 }
 
@@ -262,7 +274,7 @@ impl App {
             None => return,
         };
 
-       state.resize(width, height);
+       state.engine.resize(width, height);
     }
 }
 
@@ -339,7 +351,7 @@ impl ApplicationHandler<State> for App {
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => state.resize(size.width, size.height),
+            WindowEvent::Resized(size) => state.engine.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
                 state.render();
             }
