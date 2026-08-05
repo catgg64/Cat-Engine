@@ -12,7 +12,7 @@ pub struct CatEngine {
 }
 
 impl CatEngine {
-    pub fn new(width: u32, height: u32) -> Result<CatEngine, Error> {
+    pub fn new(program: Box<dyn Program>, width: u32, height: u32) -> Result<CatEngine, Error> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -27,13 +27,13 @@ impl CatEngine {
         {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let mut app = App::new(width, height);
+                let mut app = App::new(program, width, height);
                 event_loop.run_app(&mut app)?;
                 app
             }
             #[cfg(target_arch = "wasm32")]
             {
-                let app = App::new(&event_loop, width, height);
+                let app = App::new(&event_loop, program, width, height);
                 event_loop.spawn_app(app);
                 app
             }
@@ -43,9 +43,9 @@ impl CatEngine {
     }
 }
 
-//pub trait Program {
-//    fn update
-//}
+pub trait Program {
+    fn update(&mut self);
+}
 
 // this will store the state of the game
 pub struct State {
@@ -55,12 +55,13 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
     window: Arc<Window>,
+    program: Box<dyn Program>,
     pub mouse_pos_x: f64,
     pub mouse_pos_y: f64,
 }
 
 impl State {
-    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
+    pub async fn new(program: Box<dyn Program>, window: Arc<Window>) -> anyhow::Result<Self> {
         
         let size = window.inner_size();
 
@@ -109,8 +110,8 @@ impl State {
         let surface_caps = surface.get_capabilities(&adapter);
         // Shader code in this tutorial assumes an sRGB surface texture. Using a different
         // one will result in all the colors coming out darker. If you want to support non
-        // sRGB surfaces, you'll need to account for that when drawing to the frame.
         let surface_format = surface_caps.formats.iter()
+        // sRGB surfaces, you'll need to account for that when drawing to the frame.
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
@@ -131,6 +132,7 @@ impl State {
             device,
             queue,
             config,
+            program,
             is_surface_configured: false,
             window,
             mouse_pos_x: 0.0,
@@ -213,37 +215,42 @@ impl State {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-                multiview_mask: None,
-            });
-        }
+                    depth_stencil_attachment: None,
+                    occlusion_query_set: None,
+                    timestamp_writes: None,
+                    multiview_mask: None,
+                });
+            }
 
-    // submit will accept anything that implements IntoIter
-    self.queue.submit(std::iter::once(encoder.finish()));
-    self.queue.present(output);
+        self.program.update();
 
-    Ok(())
-}
+        // submit will accept anything that implements IntoIter
+        self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue.present(output);
+
+        Ok(())
+        
+    }
 }
 
 pub struct App {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     pub state: Option<State>,
+    program: Option<Box<dyn Program>>,    
     width: u32,
     height: u32,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, width: u32, height: u32) -> Self {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, program: Box<dyn Program>, width: u32, height: u32) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
             state: None,
             #[cfg(target_arch = "wasm32")]
             proxy,
+            program: Some(program),
             width,
             height,
         }
@@ -284,7 +291,7 @@ impl ApplicationHandler<State> for App {
         {
             // If we are not on web we can use pollster to
             // await the window creation
-            self.state = Some(pollster::block_on(State::new(window)).unwrap());
+            self.state = Some(pollster::block_on(State::new(self.program.take().unwrap(), window)).unwrap());
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -352,37 +359,37 @@ impl ApplicationHandler<State> for App {
     
 }
 
-pub fn run() -> anyhow::Result<()> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        env_logger::init();
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        console_log::init_with_level(log::Level::Info).unwrap_throw();
-    }
+//pub fn run() -> anyhow::Result<()> {
+//#[cfg(not(target_arch = "wasm32"))]
+//    {
+//        env_logger::init();
+//    }
+//    #[cfg(target_arch = "wasm32")]
+//    {
+//        console_log::init_with_level(log::Level::Info).unwrap_throw();
+//    }
 
-    let event_loop = EventLoop::with_user_event().build()?;
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let mut app = App::new(400, 400);
-        event_loop.run_app(&mut app)?;
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        let app = App::new(&event_loop, 400, 400);
-        event_loop.spawn_app(app);
-    }
+//    let event_loop = EventLoop::with_user_event().build()?;
+//    #[cfg(not(target_arch = "wasm32"))]
+//    {
+//        let mut app = App::new(400, 400);
+//        event_loop.run_app(&mut app)?;
+//    }
+//    #[cfg(target_arch = "wasm32")]
+//    {
+//        let app = App::new(&event_loop, 400, 400);
+//        event_loop.spawn_app(app);
+//    }
 
-    Ok(())
-}
+//    Ok(())
+//}
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
-pub fn run_web() -> Result<(), wasm_bindgen::JsValue> {
-    console_error_panic_hook::set_once();
-    run().unwrap_throw();
+//#[cfg(target_arch = "wasm32")]
+//#[wasm_bindgen(start)]
+//pub fn run_web() -> Result<(), wasm_bindgen::JsValue> {
+//    console_error_panic_hook::set_once();
+//    run().unwrap_throw();0
 
-    Ok(())
-}
+//    Ok(())
+//}
 
