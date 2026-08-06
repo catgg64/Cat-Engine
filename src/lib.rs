@@ -2,6 +2,8 @@ use std::{println, sync::Arc};
 use anyhow::{Ok, Error};
 use winit::{application::ApplicationHandler, dpi::{PhysicalPosition, PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, platform::x11::WindowAttributesExtX11, window::Window};
 
+pub mod shader;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
 #[cfg(target_arch = "wasm32")]
@@ -12,7 +14,7 @@ pub struct CatEngineInit {
 }
 
 impl CatEngineInit {
-    pub fn start(program: Box<dyn Program>, width: u32, height: u32) {
+    pub fn start(program: Program, width: u32, height: u32) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -115,7 +117,8 @@ impl CatEngine {
             desired_maximum_frame_latency: 2,
             color_space: wgpu::SurfaceColorSpace::Auto,
         };
-        
+
+
         Ok(Self {
             surface,
             device,
@@ -207,22 +210,24 @@ impl CatEngine {
 }
 
 pub trait Program {
+    fn new(engine: &mut CatEngine) -> Self where Self: Sized;
     fn update(&mut self, engine: &mut CatEngine);
 }
 
 // this will store the state of the game
-pub struct State {
-    program: Box<dyn Program>,
+pub struct State<P: Program> {
+    program: P,
     pub engine: CatEngine,
     pub mouse_pos_x: f64,
     pub mouse_pos_y: f64,
 }
 
-impl State {
-    pub async fn new(program: Box<dyn Program>, window: Arc<Window>) -> anyhow::Result<Self> {        
+impl<P: Program> State<P> {
+    pub async fn new(program: P, window: Arc<Window>) -> anyhow::Result<Self> {        
+        let engine = CatEngine::new(window).await.unwrap();
         Ok(Self {
             program,
-            engine: CatEngine::new(window).await.unwrap(),
+            engine,
             mouse_pos_x: 0.0,
             mouse_pos_y: 0.0,
         })
@@ -249,13 +254,13 @@ pub struct App {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     pub state: Option<State>,
-    program: Option<Box<dyn Program>>,    
+    program: Option<Program>,    
     width: u32,
     height: u32,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, program: Box<dyn Program>, width: u32, height: u32) -> Self {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, program: Program, width: u32, height: u32) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
