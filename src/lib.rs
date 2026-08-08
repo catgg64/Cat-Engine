@@ -1,5 +1,6 @@
 use std::{println, sync::Arc};
 use anyhow::{Ok, Error};
+use wgpu::{SurfaceTexture, hal::CommandEncoder, wgc::id::markers::TextureView};
 use winit::{application::ApplicationHandler, dpi::{PhysicalPosition, PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, platform::x11::WindowAttributesExtX11, window::Window};
 
 pub mod shader;
@@ -9,12 +10,12 @@ use wasm_bigen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use winit::{event_loop, platform::web::EventLoopExtWebSys};
 
-pub struct CatEngineInit {
-    pub app: App, 
+pub struct CatEngineInit<P: Program> {
+    pub app: App<P>, 
 }
 
-impl CatEngineInit {
-    pub fn start(program: Program, width: u32, height: u32) {
+impl<P: Program + 'static> CatEngineInit<P> {
+    pub fn start(width: u32, height: u32) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -29,7 +30,7 @@ impl CatEngineInit {
         {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let mut app = App::new(program, width, height);
+                let mut app = App::<P>::new(width, height);
                 event_loop.expect("event loop").run_app(&mut app);
                 app
             }
@@ -193,11 +194,38 @@ impl CatEngine {
 
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
+
+        Ok(())
+    }
+
+    pub fn update(&mut self) -> Result<(), Error> {
+        let output = match self.surface.get_current_texture() {
+                wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
+                wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
+                    surface_texture
+                }
+                wgpu::CurrentSurfaceTexture::Timeout
+                | wgpu::CurrentSurfaceTexture::Occluded
+                | wgpu::CurrentSurfaceTexture::Validation => {
+                    // Skip this frame
+                    return Ok(());
+                }
+                wgpu::CurrentSurfaceTexture::Outdated => {
+                    self.surface.configure(&self.device, &self.config);
+                    return Ok(());
+                }
+                wgpu::CurrentSurfaceTexture::Lost => {
+                    // You could recreate the devices and all resources
+                    // created with it here, but we'll just bail
+                    anyhow::bail!("Lost device");
+                }
+            };
+
         self.queue.present(output);
 
         Ok(())
     }
-    
+
     pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             let max = 2048;
@@ -223,10 +251,11 @@ pub struct State<P: Program> {
 }
 
 impl<P: Program> State<P> {
-    pub async fn new(program: P, window: Arc<Window>) -> anyhow::Result<Self> {        
-        let engine = CatEngine::new(window).await.unwrap();
+    pub async fn new(window: Arc<Window>, width: u32, height: u32) -> anyhow::Result<Self> {        
+        let mut engine = CatEngine::new(window).await.unwrap();
+        engine.resize(width, height);
         Ok(Self {
-            program,
+            program: P::new(&mut engine),
             engine,
             mouse_pos_x: 0.0,
             mouse_pos_y: 0.0,
@@ -250,24 +279,22 @@ impl<P: Program> State<P> {
     }
 }
 
-pub struct App {
+pub struct App<P: Program> {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
-    pub state: Option<State>,
-    program: Option<Program>,    
+    pub state: Option<State<P>>,
     width: u32,
     height: u32,
 }
 
-impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, program: Program, width: u32, height: u32) -> Self {
+impl<P: Program> App<P> {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>, width: u32, height: u32) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
             state: None,
             #[cfg(target_arch = "wasm32")]
             proxy,
-            program: Some(program),
             width,
             height,
         }
@@ -283,7 +310,7 @@ impl App {
     }
 }
 
-impl ApplicationHandler<State> for App {
+impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes().with_inner_size(PhysicalSize::new(self.width, self.height));
@@ -308,7 +335,7 @@ impl ApplicationHandler<State> for App {
         {
             // If we are not on web we can use pollster to
             // await the window creation
-            self.state = Some(pollster::block_on(State::new(self.program.take().unwrap(), window)).unwrap());
+            self.state = Some(pollster::block_on(State::new(window, self.width, self.height)).unwrap());
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -330,7 +357,7 @@ impl ApplicationHandler<State> for App {
     }
 
     #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State) {
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State<P>) {
         // This is where proxy.send_event() ends up
         #[cfg(target_arch = "wasm32")]
         {

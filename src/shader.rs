@@ -2,14 +2,8 @@ use std::fmt;
 use std::ops::Range;
 
 use anyhow::anyhow;
-use wgpu::{CommandEncoder, RenderPass};
+use wgpu::{CommandEncoder, RenderPass, SurfaceTexture, TextureView};
 use wgpu::{RenderPipeline, ShaderModule};
-
-pub enum ShaderError {
-    GpuValidation,
-    GpuOutdated,
-    LostDevice,
-}
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -38,6 +32,13 @@ impl fmt::Display for LostDevice {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ShaderError {
+    GpuValidation,
+    GpuOutdated,
+    LostDevice,
+}
+
 pub struct Shader {
     render_pipeline: RenderPipeline,
 }
@@ -49,7 +50,7 @@ pub use wgpu::PrimitiveTopology;
 use crate::CatEngine;
 
 impl Shader {
-    pub fn new(location: &'static str, engine: &crate::CatEngine, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Self {
+    pub fn new(location: &'static str, engine: &crate::CatEngine, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Result<Self, ShaderError> {
         
         let shader = engine.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -105,9 +106,7 @@ impl Shader {
             cache: None,
         });
 
-
-
-        Self { render_pipeline }
+        Ok(Self { render_pipeline })
     }
 
     pub fn draw(&mut self, engine: &CatEngine, vertices: Range<u32>, instances: Range<u32>) -> Result<(), ShaderError> {
@@ -137,8 +136,7 @@ impl Shader {
 
         let mut encoder = engine.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
-        });  
-
+        });
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
@@ -151,9 +149,9 @@ impl Shader {
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(
                             wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
+                                r: 0.7,
+                                g: 0.1,
+                                b: 0.8,
                                 a: 1.0,
                             }
                         ),
