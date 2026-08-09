@@ -1,9 +1,11 @@
-use std::{println, sync::Arc};
+use std::{println, sync::Arc, ops::Range};
 use anyhow::{Ok, Error};
-use wgpu::{SurfaceTexture, hal::CommandEncoder, wgc::id::markers::TextureView};
+use wgpu::{SurfaceTexture, hal::CommandEncoder, naga::{FastHashMap, FastHashSet}, util::DeviceExt, wgc::{device::queue, id::markers::TextureView}};
 use winit::{application::ApplicationHandler, dpi::{PhysicalPosition, PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, platform::x11::WindowAttributesExtX11, window::Window};
 
 pub mod shader;
+pub mod math;
+pub mod buffer;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -44,13 +46,19 @@ impl<P: Program + 'static> CatEngineInit<P> {
     }
 }
 
+pub enum CatEngineDrawCommand {
+    Shader(Arc<shader::Shader>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
+                                                        // to this so don't delete
+}
+
 pub struct CatEngine {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
-    is_surface_configured: bool,
+    pub is_surface_configured: bool,
     window: Arc<Window>,
+    pub command_list: Vec<CatEngineDrawCommand>,
 }
 
 impl CatEngine {
@@ -125,80 +133,82 @@ impl CatEngine {
             device,
             queue,
             config,
+            command_list: vec![],
             is_surface_configured: false,
             window,
         })
 
     }
-    
+
     pub fn request_redraw(&mut self) {
         self.window.request_redraw();
     }
 
     pub fn clear_screen(&mut self, r: f64, g: f64, b: f64) -> Result<(), anyhow::Error>  {
         // We can't render unless the surface is configured
-        if !self.is_surface_configured {
-            return Ok(());
-        }
-            
-        let output = match self.surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
-                wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
-                    surface_texture
-                }
-                wgpu::CurrentSurfaceTexture::Timeout
-                | wgpu::CurrentSurfaceTexture::Occluded
-                | wgpu::CurrentSurfaceTexture::Validation => {
-                    // Skip this frame
-                    return Ok(());
-                }
-                wgpu::CurrentSurfaceTexture::Outdated => {
-                    self.surface.configure(&self.device, &self.config);
-                    return Ok(());
-                }
-                wgpu::CurrentSurfaceTexture::Lost => {
-                    // You could recreate the devices and all resources
-                    // created with it here, but we'll just bail
-                    anyhow::bail!("Lost device");
-                }
-            };
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
-         
-        {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    depth_slice: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r,
-                            g,
-                            b,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                    depth_stencil_attachment: None,
-                    occlusion_query_set: None,
-                    timestamp_writes: None,
-                    multiview_mask: None,
-                });
-            }
-
-        // submit will accept anything that implements IntoIter
-        self.queue.submit(std::iter::once(encoder.finish()));
+        // if !self.is_surface_configured {
+        //     return Ok(());
+        // }
+        //
+        // let output = match self.surface.get_current_texture() {
+        //         wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
+        //         wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
+        //             surface_texture
+        //         }
+        //         wgpu::CurrentSurfaceTexture::Timeout
+        //         | wgpu::CurrentSurfaceTexture::Occluded
+        //         | wgpu::CurrentSurfaceTexture::Validation => {
+        //             // Skip this frame
+        //             return Ok(());
+        //         }
+        //         wgpu::CurrentSurfaceTexture::Outdated => {
+        //             self.surface.configure(&self.device, &self.config);
+        //             return Ok(());
+        //         }
+        //         wgpu::CurrentSurfaceTexture::Lost => {
+        //             // You could recreate the devices and all resources
+        //             // created with it here, but we'll just bail
+        //             anyhow::bail!("Lost device");
+        //         }
+        // let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        //     };
+        //
+        // let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        //     label: Some("Render Encoder"),
+        // });
+        //
+        // {
+        //     let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        //         label: Some("Render Pass"),
+        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        //             view: &view,
+        //             resolve_target: None,
+        //             depth_slice: None,
+        //             ops: wgpu::Operations {
+        //                 load: wgpu::LoadOp::Clear(wgpu::Color {
+        //                     r,
+        //                     g,
+        //                     b,
+        //                     a: 1.0,
+        //                 }),
+        //                 store: wgpu::StoreOp::Store,
+        //             },
+        //         })],
+        //             depth_stencil_attachment: None,
+        //             occlusion_query_set: None,
+        //             timestamp_writes: None,
+        //             multiview_mask: None,
+        //         });
+        //     }
+        //
+        // // submit will accept anything that implements IntoIter
+        // self.queue.submit(std::iter::once(encoder.finish()));
+        //
 
         Ok(())
     }
 
-    pub fn update(&mut self) -> Result<(), Error> {
+    pub fn update(&mut self, r: f64, g: f64, b: f64) -> Result<(), Error> {
         let output = match self.surface.get_current_texture() {
                 wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
                 wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
@@ -221,7 +231,55 @@ impl CatEngine {
                 }
             };
 
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
+        });
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[
+                    // This is what @location(0) in the fragment shader targets
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        depth_slice: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(
+                                wgpu::Color {
+                                    r,
+                                    g,
+                                    b,
+                                    a: 1.0,
+                                }
+                            ),
+                            store: wgpu::StoreOp::Store,
+                        }
+                    })
+                ],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+                multiview_mask: None,
+            });
+
+
+
+            for command in &mut self.command_list {
+                match command {
+                    CatEngineDrawCommand::Shader(shader, vertices, instances) => {
+                        render_pass.set_pipeline(shader.get_pipeline());
+                        
+                        render_pass.draw(vertices.to_owned(), instances.to_owned());
+                    }
+                }
+            }
+        }
+        self.queue.submit(std::iter::once(encoder.finish()));
         self.queue.present(output);
+
+        self.command_list.clear();
 
         Ok(())
     }
@@ -428,6 +486,7 @@ impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
 //    Ok(())
 //}
 
+// TODO: Add this web stuff
 //#[cfg(target_arch = "wasm32")]
 //#[wasm_bindgen(start)]
 //pub fn run_web() -> Result<(), wasm_bindgen::JsValue> {
