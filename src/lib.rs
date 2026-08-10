@@ -46,7 +46,7 @@ impl<P: Program + 'static> CatEngineInit<P> {
 }
 
 pub enum CatEngineDrawCommand {
-    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
+    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
                                                                                   // to this so don't delete
 }
 
@@ -203,19 +203,21 @@ impl CatEngine {
 
             for command in &mut self.command_list {
                 match command {
-                    CatEngineDrawCommand::Shader(shader, buffer_slice, slot_num, bounds, vertices, instances) => {
+                    CatEngineDrawCommand::Shader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices) => {
                         render_pass.set_pipeline(shader.get_pipeline());
                         
                         match bounds {
                             math::Range::Range(r) => {
-                                render_pass.set_vertex_buffer(slot_num.to_owned(), buffer_slice.get_buffer().slice(r.to_owned()));
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(r.to_owned()));
+                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(r.to_owned()), wgpu::IndexFormat::Uint16);
                             },
                             math::Range::Full => {
-                                render_pass.set_vertex_buffer(slot_num.to_owned(), buffer_slice.get_buffer().slice(..));
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(..));
+                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(..), wgpu::IndexFormat::Uint16);
                             },
                         };
-
-                        render_pass.draw(vertices.to_owned(), instances.to_owned());
+                
+                        render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
                     }
                 }
             }
@@ -240,44 +242,40 @@ impl CatEngine {
 }
 
 pub trait Program {
-    fn new(engine: &mut CatEngine) -> Self where Self: Sized;
-    fn update(&mut self, engine: &mut CatEngine);
+    fn new(catengine: &mut CatEngine) -> Self where Self: Sized;
+    fn update(&mut self, catengine: &mut CatEngine);
+    fn handle_event(&mut self, catengine: &mut CatEngine);
 }
 
 // this will store the state of the game
 pub struct State<P: Program> {
     program: P,
-    pub engine: CatEngine,
-    pub mouse_pos_x: f64,
-    pub mouse_pos_y: f64,
+    pub catengine: CatEngine,
 }
 
 impl<P: Program> State<P> {
     pub async fn new(window: Arc<Window>, width: u32, height: u32) -> anyhow::Result<Self> {        
-        let mut engine = CatEngine::new(window).await.unwrap();
-        engine.resize(width, height);
+        let mut catengine = CatEngine::new(window).await.unwrap();
+        catengine.resize(width, height);
         Ok(Self {
-            program: P::new(&mut engine),
-            engine,
-            mouse_pos_x: 0.0,
-            mouse_pos_y: 0.0,
+            program: P::new(&mut catengine),
+            catengine,
         })
     }
 
-    fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+    fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
-            _ => {}
+            _ => {self.program.handle_key(&mut self.catengine, event_loop, code, is_pressed);}
         }
     }
 
     fn handle_mouse_moved(&mut self, x: f64, y: f64) {
-        self.mouse_pos_x = x;
-        self.mouse_pos_y = y;
+        self.program.handle_mouse_moved(catengine, x, y);
     }
     
     fn render(&mut self) {
-        self.program.update(&mut self.engine);
+        self.program.update(&mut self.catengine);
     }
 }
 
@@ -308,7 +306,7 @@ impl<P: Program> App<P> {
             None => return,
         };
 
-       state.engine.resize(width, height);
+       state.catengine.resize(width, height);
     }
 }
 
@@ -385,7 +383,7 @@ impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => state.engine.resize(size.width, size.height),
+            WindowEvent::Resized(size) => state.catengine.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
                 state.render();
             }

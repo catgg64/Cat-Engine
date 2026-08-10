@@ -42,37 +42,48 @@ pub struct Shader {
 pub use wgpu::Face;
 pub use wgpu::FrontFace;
 pub use wgpu::PrimitiveTopology;
+use wgpu::VertexBufferLayout;
+
+
 
 impl Shader {
-    pub fn new(location: &'static str, engine: &mut crate::CatEngine, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Result<Shader, ShaderError> {
+    pub fn new(location: &'static str, catengine: &mut crate::CatEngine, vertex_buffer_layouts: Option<&[Option<VertexBufferLayout>]>, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Result<Shader, ShaderError> {
+        //if let Some(v) = vertex_buffer_layouts {
+        //    let vertex_buffer_layouts: &'static [wgpu::VertexBufferLayout] = Box::leak(v.iter().map(|x| x.get_layout()).collect::<Vec<_>>().into_boxed_slice());
+        //}
         
-        let shader = engine.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = catengine.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(std::fs::read_to_string(location).unwrap().into()),
         });
 
         let render_pipeline_layout =
-            engine.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            catengine.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[],
                 immediate_size: 0,
             }
         );
 
-        let render_pipeline = engine.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let render_pipeline = catengine.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some(vertex_function_name),
-                buffers: &[],
+                buffers: {
+                    match vertex_buffer_layouts {
+                        Some(v) => v,
+                        None => &[]
+                    }
+                },
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: Some(framgment_function_name),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: engine.config.format,
+                    format: catengine.config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
