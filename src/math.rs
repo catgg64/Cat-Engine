@@ -10,3 +10,10 @@ pub struct Coordinate3D {
     pub y: f64,
     pub z: f64,
 }
+
+#[derive(Clone, Debug)]
+pub enum Range<T> {
+    Range(std::ops::Range<T>),
+    Full,
+}
+

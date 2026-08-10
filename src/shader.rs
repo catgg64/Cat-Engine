@@ -1,9 +1,5 @@
 use std::fmt;
-use std::ops::Range;
-
-use anyhow::anyhow;
-use wgpu::{CommandEncoder, RenderPass, SurfaceTexture, TextureView};
-use wgpu::{RenderPipeline, ShaderModule};
+use wgpu::RenderPipeline;
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -46,8 +42,6 @@ pub struct Shader {
 pub use wgpu::Face;
 pub use wgpu::FrontFace;
 pub use wgpu::PrimitiveTopology;
-
-use crate::CatEngine;
 
 impl Shader {
     pub fn new(location: &'static str, engine: &mut crate::CatEngine, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Result<Shader, ShaderError> {

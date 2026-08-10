@@ -1,7 +1,7 @@
 use crate::CatEngine;
 use wgpu::util::DeviceExt;
 
-pub use wgpu::BufferUsages;
+pub use wgpu::{BufferUsages, VertexStepMode, VertexFormat, VertexAttribute, BufferAddress};
 
 pub struct Buffer {
     buffer: wgpu::Buffer,
@@ -29,6 +29,19 @@ pub struct VertexBufferLayout {
     layout: wgpu::VertexBufferLayout<'static>,
 }
 
-//impl VertexBufferLayout {
-//    
-//}
+impl VertexBufferLayout {
+    pub fn new(array_stride: usize, step_mode: VertexStepMode, attributes: Vec<VertexAttribute>) -> Self {
+        let attributes: &'static [VertexAttribute] = Box::leak(attributes.into_boxed_slice());
+
+        let layout = wgpu::VertexBufferLayout {
+            array_stride: array_stride as u64,
+            step_mode,
+            attributes,
+        };
+        Self { layout }
+    }    
+
+    pub fn get_layout(&self) -> &wgpu::VertexBufferLayout<'static> {
+        &self.layout
+    }
+}

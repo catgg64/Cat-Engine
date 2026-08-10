@@ -1,7 +1,6 @@
-use std::{println, sync::Arc, ops::Range};
+use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use wgpu::{SurfaceTexture, hal::CommandEncoder, naga::{FastHashMap, FastHashSet}, util::DeviceExt, wgc::{device::queue, id::markers::TextureView}};
-use winit::{application::ApplicationHandler, dpi::{PhysicalPosition, PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, platform::x11::WindowAttributesExtX11, window::Window};
+use winit::{application::ApplicationHandler, dpi::{PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
 
 pub mod shader;
 pub mod math;
@@ -28,12 +27,12 @@ impl<P: Program + 'static> CatEngineInit<P> {
         }
 
         let event_loop = EventLoop::with_user_event().build();
-        let mut app = 
+         
         {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let mut app = App::<P>::new(width, height);
-                event_loop.expect("event loop").run_app(&mut app);
+                let _ = event_loop.expect("event loop").run_app(&mut app);
                 app
             }
             #[cfg(target_arch = "wasm32")]
@@ -47,8 +46,8 @@ impl<P: Program + 'static> CatEngineInit<P> {
 }
 
 pub enum CatEngineDrawCommand {
-    Shader(Arc<shader::Shader>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
-                                                        // to this so don't delete
+    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
+                                                                                  // to this so don't delete
 }
 
 pub struct CatEngine {
@@ -144,70 +143,6 @@ impl CatEngine {
         self.window.request_redraw();
     }
 
-    pub fn clear_screen(&mut self, r: f64, g: f64, b: f64) -> Result<(), anyhow::Error>  {
-        // We can't render unless the surface is configured
-        // if !self.is_surface_configured {
-        //     return Ok(());
-        // }
-        //
-        // let output = match self.surface.get_current_texture() {
-        //         wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
-        //         wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
-        //             surface_texture
-        //         }
-        //         wgpu::CurrentSurfaceTexture::Timeout
-        //         | wgpu::CurrentSurfaceTexture::Occluded
-        //         | wgpu::CurrentSurfaceTexture::Validation => {
-        //             // Skip this frame
-        //             return Ok(());
-        //         }
-        //         wgpu::CurrentSurfaceTexture::Outdated => {
-        //             self.surface.configure(&self.device, &self.config);
-        //             return Ok(());
-        //         }
-        //         wgpu::CurrentSurfaceTexture::Lost => {
-        //             // You could recreate the devices and all resources
-        //             // created with it here, but we'll just bail
-        //             anyhow::bail!("Lost device");
-        //         }
-        // let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        //     };
-        //
-        // let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //     label: Some("Render Encoder"),
-        // });
-        //
-        // {
-        //     let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        //         label: Some("Render Pass"),
-        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-        //             view: &view,
-        //             resolve_target: None,
-        //             depth_slice: None,
-        //             ops: wgpu::Operations {
-        //                 load: wgpu::LoadOp::Clear(wgpu::Color {
-        //                     r,
-        //                     g,
-        //                     b,
-        //                     a: 1.0,
-        //                 }),
-        //                 store: wgpu::StoreOp::Store,
-        //             },
-        //         })],
-        //             depth_stencil_attachment: None,
-        //             occlusion_query_set: None,
-        //             timestamp_writes: None,
-        //             multiview_mask: None,
-        //         });
-        //     }
-        //
-        // // submit will accept anything that implements IntoIter
-        // self.queue.submit(std::iter::once(encoder.finish()));
-        //
-
-        Ok(())
-    }
-
     pub fn update(&mut self, r: f64, g: f64, b: f64) -> Result<(), Error> {
         let output = match self.surface.get_current_texture() {
                 wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
@@ -250,7 +185,7 @@ impl CatEngine {
                                 wgpu::Color {
                                     r,
                                     g,
-                                    b,
+                                    b, //Person in sitcom: breathes
                                     a: 1.0,
                                 }
                             ),
@@ -268,9 +203,18 @@ impl CatEngine {
 
             for command in &mut self.command_list {
                 match command {
-                    CatEngineDrawCommand::Shader(shader, vertices, instances) => {
+                    CatEngineDrawCommand::Shader(shader, buffer_slice, slot_num, bounds, vertices, instances) => {
                         render_pass.set_pipeline(shader.get_pipeline());
                         
+                        match bounds {
+                            math::Range::Range(r) => {
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), buffer_slice.get_buffer().slice(r.to_owned()));
+                            },
+                            math::Range::Full => {
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), buffer_slice.get_buffer().slice(..));
+                            },
+                        };
+
                         render_pass.draw(vertices.to_owned(), instances.to_owned());
                     }
                 }
