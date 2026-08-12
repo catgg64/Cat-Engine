@@ -1,10 +1,12 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use winit::{application::ApplicationHandler, dpi::{PhysicalSize}, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
+use {application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;
 pub mod math;
 pub mod buffer;
+
+pub use winit::*;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -47,7 +49,7 @@ impl<P: Program + 'static> CatEngineInit<P> {
 
 pub enum CatEngineDrawCommand {
     Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
-                                                                                  // to this so don't delete
+                                                                                                                         // to this so don't delete
 }
 
 pub struct CatEngine {
@@ -131,9 +133,9 @@ impl CatEngine {
             surface,
             device,
             queue,
-            config,
             command_list: vec![],
             is_surface_configured: false,
+            config,
             window,
         })
 
@@ -244,7 +246,7 @@ impl CatEngine {
 pub trait Program {
     fn new(catengine: &mut CatEngine) -> Self where Self: Sized;
     fn update(&mut self, catengine: &mut CatEngine);
-    fn handle_event(&mut self, catengine: &mut CatEngine);
+    fn handle_event(&mut self, catengine: &mut CatEngine, event: WindowEvent);
 }
 
 // this will store the state of the game
@@ -263,16 +265,20 @@ impl<P: Program> State<P> {
         })
     }
 
-    fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        match (code, is_pressed) {
-            (KeyCode::Escape, true) => event_loop.exit(),
-            _ => {self.program.handle_key(&mut self.catengine, event_loop, code, is_pressed);}
-        }
+    fn handle_event(&mut self, event: WindowEvent) {
+        self.program.handle_event(&mut self.catengine, event);
     }
 
-    fn handle_mouse_moved(&mut self, x: f64, y: f64) {
-        self.program.handle_mouse_moved(catengine, x, y);
-    }
+    //fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+    //    match (code, is_pressed) {
+    //        (KeyCode::Escape, true) => event_loop.exit(),
+    //        _ => {self.program.handle_key(&mut self.catengine, event_loop, code, is_pressed);}
+    //    }
+    //}
+
+    //fn handle_mouse_moved(&mut self, x: f64, y: f64) {
+    //    self.program.handle_mouse_moved(catengine, x, y);
+    //}
     
     fn render(&mut self) {
         self.program.update(&mut self.catengine);
@@ -381,22 +387,14 @@ impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
             None => return,
         };
 
+        state.handle_event(event.clone());
+
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.catengine.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
                 state.render();
             }
-            WindowEvent::CursorMoved { position, .. } => {state.handle_mouse_moved(position.x, position.y)}
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => state.handle_key(event_loop, code, key_state.is_pressed()),
             _ => {}
         }
     }
