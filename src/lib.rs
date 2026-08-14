@@ -1,5 +1,6 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
+use wgpu::{BindGroup, BindGroupLayout};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;

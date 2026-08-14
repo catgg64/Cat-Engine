@@ -1,6 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
-use wgpu::{BindGroupLayout, RenderPipeline};
+use wgpu::RenderPipeline;
+
+pub use wgpu::{BindGroupLayout, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType};
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -44,6 +46,8 @@ pub use wgpu::Face;
 pub use wgpu::FrontFace;
 pub use wgpu::PrimitiveTopology;
 use wgpu::VertexBufferLayout;
+
+use crate::CatEngine;
 
 
 
