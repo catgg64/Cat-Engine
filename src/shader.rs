@@ -1,5 +1,6 @@
 use std::fmt;
-use wgpu::RenderPipeline;
+use std::sync::Arc;
+use wgpu::{BindGroupLayout, RenderPipeline};
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -47,11 +48,20 @@ use wgpu::VertexBufferLayout;
 
 
 impl Shader {
-    pub fn new(location: &'static str, catengine: &mut crate::CatEngine, vertex_buffer_layouts: Option<&[Option<VertexBufferLayout>]>, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>) -> Result<Shader, ShaderError> {
+    pub fn new(location: &'static str, catengine: &mut crate::CatEngine, vertex_buffer_layouts: Option<&[Option<VertexBufferLayout>]>, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>, surfaces: Vec<Option<Arc<crate::surface::Surface>>>) -> Result<Shader, ShaderError> {
         //if let Some(v) = vertex_buffer_layouts {
         //    let vertex_buffer_layouts: &'static [wgpu::VertexBufferLayout] = Box::leak(v.iter().map(|x| x.get_layout()).collect::<Vec<_>>().into_boxed_slice());
         //}
         
+        let bind_group_layouts: Vec<Option<&BindGroupLayout>> = surfaces.iter().map(|surface| {
+                    if let Some(surface) = surface {
+                        Some(surface.get_bind_group_layout())
+                    }
+                    else {
+                        None
+                    }
+                }).collect();
+
         let shader = catengine.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(std::fs::read_to_string(location).unwrap().into()),
@@ -60,7 +70,8 @@ impl Shader {
         let render_pipeline_layout =
             catengine.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+
+                bind_group_layouts: &bind_group_layouts,
                 immediate_size: 0,
             }
         );

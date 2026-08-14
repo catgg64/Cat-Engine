@@ -1,17 +1,20 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use {application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;
 pub mod math;
 pub mod buffer;
+pub mod surface;
 
-pub use winit::*;
+pub use winit;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use winit::{event_loop, platform::web::EventLoopExtWebSys};
+
+use crate::surface::Surface;
 
 pub struct CatEngineInit<P: Program> {
     pub app: App<P>, 
@@ -48,8 +51,8 @@ impl<P: Program + 'static> CatEngineInit<P> {
 }
 
 pub enum CatEngineDrawCommand {
-    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>) // perhaps in the future we will add more stuff
-                                                                                                                         // to this so don't delete
+    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>),
+    TextureShader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Arc<Surface>, u32, Vec<u32>),
 }
 
 pub struct CatEngine {
@@ -60,6 +63,8 @@ pub struct CatEngine {
     pub is_surface_configured: bool,
     window: Arc<Window>,
     pub command_list: Vec<CatEngineDrawCommand>,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl CatEngine {
@@ -107,7 +112,6 @@ impl CatEngine {
             })
             .await.unwrap();
 
-
         let surface_caps = surface.get_capabilities(&adapter);
         // Shader code in this tutorial assumes an sRGB surface texture. Using a different
         // one will result in all the colors coming out darker. If you want to support non
@@ -137,6 +141,8 @@ impl CatEngine {
             is_surface_configured: false,
             config,
             window,
+            width: size.width,
+            height: size.height,
         })
 
     }
@@ -221,6 +227,23 @@ impl CatEngine {
                 
                         render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
                     }
+                    CatEngineDrawCommand::TextureShader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, surface, index, offsets) => {
+                        render_pass.set_pipeline(shader.get_pipeline());
+                        render_pass.set_bind_group(*index, surface.get_bind_group(), offsets);
+
+                        match bounds {
+                            math::Range::Range(r) => {
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(r.to_owned()));
+                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(r.to_owned()), wgpu::IndexFormat::Uint16);
+                            },
+                            math::Range::Full => {
+                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(..));
+                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(..), wgpu::IndexFormat::Uint16);
+                            },
+                        };
+                
+                        render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
+                    }
                 }
             }
         }
@@ -239,6 +262,8 @@ impl CatEngine {
             self.config.height = height.min(max);
             self.surface.configure(&self.device, &self.config);
             self.is_surface_configured = true;
+            self.width = width;
+            self.height = height;
         }
     }
 }
@@ -268,18 +293,7 @@ impl<P: Program> State<P> {
     fn handle_event(&mut self, event: WindowEvent) {
         self.program.handle_event(&mut self.catengine, event);
     }
-
-    //fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-    //    match (code, is_pressed) {
-    //        (KeyCode::Escape, true) => event_loop.exit(),
-    //        _ => {self.program.handle_key(&mut self.catengine, event_loop, code, is_pressed);}
-    //    }
-    //}
-
-    //fn handle_mouse_moved(&mut self, x: f64, y: f64) {
-    //    self.program.handle_mouse_moved(catengine, x, y);
-    //}
-    
+ 
     fn render(&mut self) {
         self.program.update(&mut self.catengine);
     }
