@@ -1,14 +1,18 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use wgpu::{BindGroup, BindGroupLayout};
+use wgpu::{BindGroup, BindGroupDescriptor};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;
 pub mod math;
 pub mod buffer;
 pub mod surface;
+pub mod bindgroup {
+    pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, BindGroupEntry, BindingResource, BindGroupLayoutDescriptor, BindGroupLayout, BindGroupDescriptor, BindGroup, BufferBinding};
+}
 
 pub use winit;
+pub use wgpu;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -266,6 +270,14 @@ impl CatEngine {
             self.width = width;
             self.height = height;
         }
+    }
+    
+    pub fn create_bind_group_layout(&self, desc: wgpu::BindGroupLayoutDescriptor) -> wgpu::BindGroupLayout {
+        self.device.create_bind_group_layout(&desc)
+    }
+
+    pub fn create_bind_group(&self, desc: BindGroupDescriptor) -> BindGroup {
+        self.device.create_bind_group(&desc)
     }
 }
 

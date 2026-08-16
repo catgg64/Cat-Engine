@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 use wgpu::RenderPipeline;
 
-pub use wgpu::{BindGroupLayout, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType};
+pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType};
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -45,26 +45,26 @@ pub struct Shader {
 pub use wgpu::Face;
 pub use wgpu::FrontFace;
 pub use wgpu::PrimitiveTopology;
-use wgpu::VertexBufferLayout;
+pub use wgpu::VertexBufferLayout;
 
 use crate::CatEngine;
 
 
 
 impl Shader {
-    pub fn new(location: &'static str, catengine: &mut crate::CatEngine, vertex_buffer_layouts: Option<&[Option<VertexBufferLayout>]>, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>, surfaces: Vec<Option<Arc<crate::surface::Surface>>>) -> Result<Shader, ShaderError> {
+    pub fn new(location: &'static str, catengine: &mut crate::CatEngine, vertex_buffer_layouts: Option<&[Option<VertexBufferLayout>]>, vertex_function_name: &str, framgment_function_name: &str, topology: wgpu::PrimitiveTopology, front_face: wgpu::FrontFace, cull_mode: Option<wgpu::Face>, bind_group_layouts: &[Option<&crate::bindgroup::BindGroupLayout>]) -> Result<Shader, ShaderError> {
         //if let Some(v) = vertex_buffer_layouts {
         //    let vertex_buffer_layouts: &'static [wgpu::VertexBufferLayout] = Box::leak(v.iter().map(|x| x.get_layout()).collect::<Vec<_>>().into_boxed_slice());
         //}
         
-        let bind_group_layouts: Vec<Option<&BindGroupLayout>> = surfaces.iter().map(|surface| {
-                    if let Some(surface) = surface {
-                        Some(surface.get_bind_group_layout())
-                    }
-                    else {
-                        None
-                    }
-                }).collect();
+        //let bind_group_layouts: Vec<Option<&wgpu::BindGroupLayout>> = surfaces.iter().map(|surface| {
+        //            if let Some(surface) = surface {
+        //                Some(surface.get_bind_group_layout())
+        //            }
+        //            else {
+        //                None
+        //            }
+        //        }).collect();
 
         let shader = catengine.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -75,7 +75,7 @@ impl Shader {
             catengine.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
 
-                bind_group_layouts: &bind_group_layouts,
+                bind_group_layouts: bind_group_layouts,
                 immediate_size: 0,
             }
         );

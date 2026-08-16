@@ -1,5 +1,5 @@
 use crate::CatEngine;
-use wgpu::util::DeviceExt;
+use wgpu::{BindingResource, util::DeviceExt};
 
 pub use wgpu::{BufferUsages, VertexStepMode, VertexFormat, VertexAttribute, BufferAddress, VertexBufferLayout};
 
@@ -22,5 +22,9 @@ impl Buffer {
 
     pub fn get_buffer(&self) -> &wgpu::Buffer {
         &self.buffer
+    }
+
+    pub fn as_entire_binding(&self) -> BindingResource<'_> {
+        self.buffer.as_entire_binding()
     }
 }
