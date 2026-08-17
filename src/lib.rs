@@ -56,8 +56,9 @@ impl<P: Program + 'static> CatEngineInit<P> {
 }
 
 pub enum CatEngineDrawCommand {
-    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>),
-    TextureShader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Arc<Surface>, u32, Vec<u32>),
+    //Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>),
+    //TextureShader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Arc<Surface>, u32, Vec<u32>),
+    Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Vec<(Arc<BindGroup>, u32, Vec<u32>)>),
 }
 
 pub struct CatEngine {
@@ -216,8 +217,11 @@ impl CatEngine {
 
             for command in &mut self.command_list {
                 match command {
-                    CatEngineDrawCommand::Shader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices) => {
+                    CatEngineDrawCommand::Shader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, bind_groups) => {
                         render_pass.set_pipeline(shader.get_pipeline());
+                        for bind_group in bind_groups {
+                            render_pass.set_bind_group(bind_group.1, &*bind_group.0, &bind_group.2);
+                        }
                         
                         match bounds {
                             math::Range::Range(r) => {
@@ -232,23 +236,23 @@ impl CatEngine {
                 
                         render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
                     }
-                    CatEngineDrawCommand::TextureShader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, surface, index, offsets) => {
-                        render_pass.set_pipeline(shader.get_pipeline());
-                        render_pass.set_bind_group(*index, surface.get_bind_group(), offsets);
-
-                        match bounds {
-                            math::Range::Range(r) => {
-                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(r.to_owned()));
-                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(r.to_owned()), wgpu::IndexFormat::Uint16);
-                            },
-                            math::Range::Full => {
-                                render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(..));
-                                render_pass.set_index_buffer(index_buffer.get_buffer().slice(..), wgpu::IndexFormat::Uint16);
-                            },
-                        };
-                
-                        render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
-                    }
+                //     CatEngineDrawCommand::TextureShader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, surface, index, offsets) => {
+                //         render_pass.set_pipeline(shader.get_pipeline());
+                //         render_pass.set_bind_group(*index, surface.get_bind_group(), offsets);
+                //
+                //         match bounds {
+                //             math::Range::Range(r) => {
+                //                 render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(r.to_owned()));
+                //                 render_pass.set_index_buffer(index_buffer.get_buffer().slice(r.to_owned()), wgpu::IndexFormat::Uint16);
+                //             },
+                //             math::Range::Full => {
+                //                 render_pass.set_vertex_buffer(slot_num.to_owned(), vertex_buffer.get_buffer().slice(..));
+                //                 render_pass.set_index_buffer(index_buffer.get_buffer().slice(..), wgpu::IndexFormat::Uint16);
+                //             },
+                //         };
+                //
+                //         render_pass.draw_indexed(vertices.to_owned(), 0, indices.to_owned());
+                //     }
                 }
             }
         }
@@ -272,12 +276,12 @@ impl CatEngine {
         }
     }
     
-    pub fn create_bind_group_layout(&self, desc: wgpu::BindGroupLayoutDescriptor) -> wgpu::BindGroupLayout {
-        self.device.create_bind_group_layout(&desc)
+    pub fn create_bind_group_layout(&self, desc: wgpu::BindGroupLayoutDescriptor) -> Arc<wgpu::BindGroupLayout> {
+        Arc::new(self.device.create_bind_group_layout(&desc))
     }
 
-    pub fn create_bind_group(&self, desc: BindGroupDescriptor) -> BindGroup {
-        self.device.create_bind_group(&desc)
+    pub fn create_bind_group(&self, desc: BindGroupDescriptor) -> Arc<BindGroup> {
+        Arc::new(self.device.create_bind_group(&desc))
     }
 }
 

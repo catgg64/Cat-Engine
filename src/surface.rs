@@ -1,4 +1,4 @@
-use wgpu::{BindGroup, BindGroupLayout};
+use wgpu::{BindGroup, BindGroupLayout, Sampler, TextureView};
 use crate::CatEngine;
 
 pub use wgpu::{TextureDimension, TextureFormat, TextureUsages};
@@ -94,8 +94,8 @@ impl SurfaceAttributes {
 }
 
 pub struct Surface {
-    bind_group_layout: BindGroupLayout,
-    diffuse_bind_group: BindGroup,
+    view: TextureView,
+    sampler: Sampler,
 }
 
 impl Surface {
@@ -168,56 +168,14 @@ impl Surface {
             ..Default::default()
         });
 
-        let texture_bind_group_layout =
-            engine.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        // This should match the filterable field of the
-                        // corresponding Texture entry above.
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
-                label: Some("texture_bind_group_layout"),
-            });
-    
-        let diffuse_bind_group = engine.device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
-                    }
-                ],
-                label: Some("diffuse_bind_group"),
-            }
-        );
-
-        Self{ bind_group_layout: texture_bind_group_layout, diffuse_bind_group }
+        Self{ view: diffuse_texture_view, sampler: diffuse_sampler }
     }
 
-    pub fn get_bind_group(&self) -> &BindGroup {
-        &self.diffuse_bind_group
+    pub fn get_view(&self) -> &TextureView {
+        &self.view
     }
 
-    pub fn get_bind_group_layout(&self) -> &BindGroupLayout {
-        &self.bind_group_layout
+    pub fn get_sampler(&self) -> &Sampler {
+        &self.sampler
     }
 }
