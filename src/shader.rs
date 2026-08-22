@@ -1,8 +1,7 @@
 use std::fmt;
-use std::sync::Arc;
 use wgpu::RenderPipeline;
 
-pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType};
+pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, ShaderModuleDescriptor, PipelineLayoutDescriptor, RenderPipelineDescriptor};
 
 #[derive(Debug, Clone)]
 pub struct GpuValidation;
@@ -36,6 +35,12 @@ pub enum ShaderError {
     GpuValidation,
     GpuOutdated,
     LostDevice,
+}
+
+pub struct ShaderAttributes {
+    pub shader_module_descriptor: ShaderModuleDescriptor<'static>,
+    pub pipeline_layout_descriptor: PipelineLayoutDescriptor<'static>, 
+    pub render_pipeline_descriptor: RenderPipelineDescriptor<'static>,
 }
 
 pub struct Shader {

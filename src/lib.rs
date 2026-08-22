@@ -56,8 +56,6 @@ impl<P: Program + 'static> CatEngineInit<P> {
 }
 
 pub enum CatEngineDrawCommand {
-    //Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>),
-    //TextureShader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Arc<Surface>, u32, Vec<u32>),
     Shader(Arc<shader::Shader>, Arc<buffer::Buffer>, Arc<buffer::Buffer>, u32, math::Range<u64>, Range<u32>, Range<u32>, Vec<(Arc<BindGroup>, u32, Vec<u32>)>),
 }
 
@@ -282,6 +280,10 @@ impl CatEngine {
 
     pub fn create_bind_group(&self, desc: BindGroupDescriptor) -> Arc<BindGroup> {
         Arc::new(self.device.create_bind_group(&desc))
+    }
+
+    pub fn write_buffer(&mut self, buffer: &buffer::Buffer, index: u64, contents: &[u8]) {
+        self.queue.write_buffer(buffer.get_buffer(), index, contents);
     }
 }
 
