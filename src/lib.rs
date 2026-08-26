@@ -1,6 +1,6 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use wgpu::{BindGroup, BindGroupDescriptor};
+use wgpu::{BindGroup, BindGroupDescriptor, CurrentSurfaceTexture, ShaderModule, TextureViewDescriptor};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;
@@ -8,11 +8,11 @@ pub mod math;
 pub mod buffer;
 pub mod surface;
 pub mod bindgroup {
-    pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, BindGroupEntry, BindingResource, BindGroupLayoutDescriptor, BindGroupLayout, BindGroupDescriptor, BindGroup, BufferBinding};
+    pub use wgpu::{BindGroupLayoutEntry, BindingType, BufferBindingType, BindGroupEntry, BindingResource, BindGroupLayoutDescriptor, BindGroupLayout, BindGroupDescriptor, BindGroup, BufferBinding, VertexState, RenderPassColorAttachment};
 }
 
 pub use winit;
-pub use wgpu;
+pub use wgpu::{RenderPassDescriptor, CompareFunction};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -63,7 +63,7 @@ pub struct CatEngine {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
+    pub config: wgpu::SurfaceConfiguration,
     pub is_surface_configured: bool,
     window: Arc<Window>,
     pub command_list: Vec<CatEngineDrawCommand>,
@@ -155,7 +155,7 @@ impl CatEngine {
         self.window.request_redraw();
     }
 
-    pub fn update(&mut self, r: f64, g: f64, b: f64) -> Result<(), Error> {
+    pub fn update(&mut self, desc: &RenderPassDescriptor) -> Result<(), Error> {
         let output = match self.surface.get_current_texture() {
                 wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
                 wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
@@ -184,39 +184,12 @@ impl CatEngine {
             label: Some("Render Encoder"),
         });
         {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[
-                    // This is what @location(0) in the fragment shader targets
-                    Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        resolve_target: None,
-                        depth_slice: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(
-                                wgpu::Color {
-                                    r,
-                                    g,
-                                    b, //Person in sitcom: breathes
-                                    a: 1.0,
-                                }
-                            ),
-                            store: wgpu::StoreOp::Store,
-                        }
-                    })
-                ],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-                multiview_mask: None,
-            });
-
-
+            let mut render_pass = encoder.begin_render_pass(desc);
 
             for command in &mut self.command_list {
                 match command {
                     CatEngineDrawCommand::Shader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, bind_groups) => {
-                        render_pass.set_pipeline(shader.get_pipeline());
+                        render_pass.set_pipeline(&*shader.get_pipeline().get_inner());
                         for bind_group in bind_groups {
                             render_pass.set_bind_group(bind_group.1, &*bind_group.0, &bind_group.2);
                         }
@@ -273,7 +246,11 @@ impl CatEngine {
             self.height = height;
         }
     }
-    
+
+    pub fn get_current_surface_texture(&self) -> CurrentSurfaceTexture {
+        self.surface.get_current_texture()
+    }
+
     pub fn create_bind_group_layout(&self, desc: wgpu::BindGroupLayoutDescriptor) -> Arc<wgpu::BindGroupLayout> {
         Arc::new(self.device.create_bind_group_layout(&desc))
     }

@@ -1,0 +1,80 @@
+use std::sync::Arc;
+use std::fmt;
+use wgpu::RenderPipeline;
+
+pub use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, ShaderModuleDescriptor, PipelineLayoutDescriptor, RenderPipelineDescriptor};
+
+pub struct ShaderModule {
+    shader_module: Arc<wgpu::ShaderModule>,
+}
+
+impl ShaderModule {
+    pub fn new(catengine: &CatEngine)
+}
+
+#[derive(Debug, Clone)]
+pub struct GpuValidation;
+
+impl fmt::Display for GpuValidation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+        Ok(write!(f, "Gpu validating")?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GpuOutdated;
+
+impl fmt::Display for GpuOutdated {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+        Ok(write!(f, "Gpu outdated")?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LostDevice;
+
+impl fmt::Display for LostDevice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+        Ok(write!(f, "Lost device")?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ShaderError {
+    GpuValidation,
+    GpuOutdated,
+    LostDevice,
+}
+
+pub struct ShaderAttributes {
+    pub shader_module_descriptor: ShaderModuleDescriptor<'static>,
+    pub pipeline_layout_descriptor: PipelineLayoutDescriptor<'static>, 
+    pub render_pipeline_descriptor: RenderPipelineDescriptor<'static>,
+}
+
+pub struct Shader {
+    render_pipeline: RenderPipeline,
+}
+
+pub use wgpu::Face;
+pub use wgpu::FrontFace;
+pub use wgpu::PrimitiveTopology;
+pub use wgpu::VertexBufferLayout;
+
+use crate::CatEngine;
+
+impl Shader {
+    pub fn new(catengine: &crate::CatEngine, args: ShaderAttributes) -> Result<Shader, ShaderError> {
+        let shader = catengine.device.create_shader_module(args.shader_module_descriptor);
+
+        let render_pipeline_layout = catengine.device.create_pipeline_layout(&args.pipeline_layout_descriptor);
+
+        let render_pipeline = catengine.device.create_render_pipeline(&args.render_pipeline_descriptor);
+
+        Ok(Self{ render_pipeline })
+    }
+
+    pub fn get_pipeline(&self) -> &RenderPipeline {
+        &self.render_pipeline
+    }
+}
