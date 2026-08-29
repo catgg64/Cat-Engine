@@ -1,6 +1,6 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use wgpu::{BindGroup, BindGroupDescriptor, CurrentSurfaceTexture, ShaderModule, TextureViewDescriptor};
+use wgpu::{BindGroup, BindGroupDescriptor, RenderPass, ShaderModule, SurfaceTexture, TextureViewDescriptor};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
 
 pub mod shader;
@@ -12,7 +12,8 @@ pub mod bindgroup {
 }
 
 pub use winit;
-pub use wgpu::{RenderPassDescriptor, CompareFunction};
+pub use wgpu::{RenderPassDescriptor, CompareFunction, CurrentSurfaceTexture};
+pub use wgpu;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bigen::prelude::*;
@@ -155,37 +156,12 @@ impl CatEngine {
         self.window.request_redraw();
     }
 
-    pub fn update(&mut self, desc: &RenderPassDescriptor) -> Result<(), Error> {
-        let output = match self.surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
-                wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
-                    surface_texture
-                }
-                wgpu::CurrentSurfaceTexture::Timeout
-                | wgpu::CurrentSurfaceTexture::Occluded
-                | wgpu::CurrentSurfaceTexture::Validation => {
-                    // Skip this frame
-                    return Ok(());
-                }
-                wgpu::CurrentSurfaceTexture::Outdated => {
-                    self.surface.configure(&self.device, &self.config);
-                    return Ok(());
-                }
-                wgpu::CurrentSurfaceTexture::Lost => {
-                    // You could recreate the devices and all resources
-                    // created with it here, but we'll just bail
-                    anyhow::bail!("Lost device");
-                }
-            };
-
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
+    pub fn update(&mut self, desc: &RenderPassDescriptor, output: SurfaceTexture) -> Result<(), Error> {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
         {
             let mut render_pass = encoder.begin_render_pass(desc);
-
             for command in &mut self.command_list {
                 match command {
                     CatEngineDrawCommand::Shader(shader, vertex_buffer, index_buffer, slot_num, bounds, vertices, indices, bind_groups) => {
@@ -245,6 +221,10 @@ impl CatEngine {
             self.width = width;
             self.height = height;
         }
+    }
+
+    pub fn reconfigure_surface(&mut self) {
+        self.surface.configure(&self.device, &self.config);
     }
 
     pub fn get_current_surface_texture(&self) -> CurrentSurfaceTexture {
