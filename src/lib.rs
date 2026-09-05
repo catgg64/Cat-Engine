@@ -1,7 +1,7 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
 use wgpu::{BindGroup, BindGroupDescriptor, RenderPass, ShaderModule, SurfaceTexture, TextureViewDescriptor};
-use winit::{application::ApplicationHandler, dpi::PhysicalSize, event_loop::{EventLoop, ActiveEventLoop}, window::Window, event::{WindowEvent}};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{DeviceEvent, WindowEvent}, event_loop::{ActiveEventLoop, EventLoop}, window::{Fullscreen, Window}};
 
 pub mod shader;
 pub mod math;
@@ -68,6 +68,7 @@ pub struct CatEngine {
     pub is_surface_configured: bool,
     window: Arc<Window>,
     pub command_list: Vec<CatEngineDrawCommand>,
+    pub event: Option<DeviceEvent>,
     pub width: u32,
     pub height: u32,
 }
@@ -93,12 +94,12 @@ impl CatEngine {
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::default(),
+                power_preference: wgpu::PowerPreference::LowPower,
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
                 apply_limit_buckets: true,
             })
-            .await.unwrap();
+            .await.expect("FAILED TO FIND COMPATIBLE GPU");
         
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -148,6 +149,7 @@ impl CatEngine {
             window,
             width: size.width,
             height: size.height,
+            event: None,
         })
 
     }
@@ -242,6 +244,18 @@ impl CatEngine {
     pub fn write_buffer(&mut self, buffer: &buffer::Buffer, index: u64, contents: &[u8]) {
         self.queue.write_buffer(buffer.get_buffer(), index, contents);
     }
+
+    pub fn set_cursor_visibility(&mut self, visible: bool) {
+        self.window.set_cursor_visible(visible);
+    }
+
+    pub fn set_cursor_drag(&mut self, mode: winit::window::CursorGrabMode) -> Result<(), winit::error::ExternalError> {
+        self.window.set_cursor_grab(mode)
+    }   
+
+    pub fn set_fullscreen(&mut self, fullscreen: Option<Fullscreen>) {
+        self.window.set_fullscreen(fullscreen);
+    }
 }
 
 pub trait Program {
@@ -269,7 +283,11 @@ impl<P: Program> State<P> {
     fn handle_event(&mut self, event: WindowEvent) {
         self.program.handle_event(&mut self.catengine, event);
     }
- 
+
+    fn handle_device_event(&mut self, event: DeviceEvent) {
+        self.catengine.event = Some(event);
+    }
+
     fn render(&mut self) {
         self.program.update(&mut self.catengine);
     }
@@ -389,6 +407,17 @@ impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
         }
     }
     
+    fn device_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        device_id: winit::event::DeviceId,
+        event: DeviceEvent,
+    )
+    {
+        if let Some(state) = &mut self.state {
+             state.handle_device_event(event);
+        }
+    }
 }
 
 //pub fn run() -> anyhow::Result<()> {
