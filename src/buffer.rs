@@ -2,7 +2,7 @@ use crate::CatEngine;
 use wgpu::{BindingResource, util::DeviceExt};
 
 pub use wgpu::{BufferUsages, VertexStepMode, VertexFormat, VertexAttribute, BufferAddress, VertexBufferLayout};
-
+ 
 pub struct Buffer {
     buffer: wgpu::Buffer,
 }

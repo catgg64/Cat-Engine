@@ -17,6 +17,7 @@ log = "0.4"
 wgpu = "30.0"
 pollster = "0.3"
 image = "0.25"
+glam = "0.33"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

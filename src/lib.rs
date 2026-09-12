@@ -7,6 +7,7 @@ pub mod shader;
 pub mod math;
 pub mod buffer;
 pub mod surface;
+pub mod projection;
 pub mod bindgroup {
     pub use wgpu::{BindGroupLayoutEntry, BindingType, BufferBindingType, BindGroupEntry, BindingResource, BindGroupLayoutDescriptor, BindGroupLayout, BindGroupDescriptor, BindGroup, BufferBinding, VertexState, RenderPassColorAttachment};
 }
