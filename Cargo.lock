@@ -350,7 +350,7 @@ dependencies = [
 
 [[package]]
 name = "catengine"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",

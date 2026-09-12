@@ -1,6 +1,6 @@
 use std::{ops::Range, sync::Arc};
 use anyhow::{Ok, Error};
-use wgpu::{BindGroup, BindGroupDescriptor, RenderPass, ShaderModule, SurfaceTexture, TextureViewDescriptor};
+use wgpu::{BindGroup, BindGroupDescriptor, SurfaceTexture};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{DeviceEvent, WindowEvent}, event_loop::{ActiveEventLoop, EventLoop}, window::{Fullscreen, Window}};
 
 pub mod shader;
@@ -20,8 +20,6 @@ pub use wgpu;
 use wasm_bigen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use winit::{event_loop, platform::web::EventLoopExtWebSys};
-
-use crate::surface::Surface;
 
 pub struct CatEngineInit<P: Program> {
     pub app: App<P>, 
@@ -410,8 +408,8 @@ impl<P: Program + 'static> ApplicationHandler<State<P>> for App<P> {
     
     fn device_event(
         &mut self,
-        event_loop: &ActiveEventLoop,
-        device_id: winit::event::DeviceId,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
         event: DeviceEvent,
     )
     {
